@@ -29,6 +29,7 @@ SOURCES += \
         mainwindow.cpp
 
 HEADERS += \
+        imghandler_stt.h \
         mainwindow.h
 
 FORMS += \
