@@ -72,8 +72,6 @@ private:
     QString hostName;
     QString port;
     QTcpSocket* sendSock;
-    QTcpServer* recvSock;
-    bool isWaiting = false;
 
 };
 

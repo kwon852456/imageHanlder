@@ -91,7 +91,7 @@ void MainWindow::on_btn_connect_clicked()
 }
 
 
-/// 구현 예정 //￣
+/// 구현 예정 //
 void MainWindow::on_btn_bright_clicked()
 {
 
@@ -164,25 +164,4 @@ void SocWorker::onAskTask(QString _fPath, int _mode, QString _option){
     emit resultReady(recvData);
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
