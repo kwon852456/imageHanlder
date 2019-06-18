@@ -7,14 +7,6 @@
 ///////    Constant Values    ///////////
 /////////////////////////////////////////
 
-const int (*inImg5)[512] = new int[512][512];
-const int (*inImg2)[256] = new int[256][256];
-const int (*inImg1)[128] = new int[128][128];
-
-const int (*outImg5)[512] = new int[512][512];
-const int (*outImg2)[256] = new int[256][256];
-const int (*outImg1)[128] = new int[128][128];
-
 const int TIMEOUT = 3 * 1000; // 3 seconds
 
 
@@ -128,8 +120,8 @@ SocWorker::SocWorker(){
     connect(sendSock, &QTcpSocket::connected     , this, &SocWorker::onServerConnected);
 
 }
-
 void SocWorker::onServerConnected(){
+
     qDebug() << __func__;
 
     emit sendMsg("conection to server sucessed...!");

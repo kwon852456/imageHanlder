@@ -7,7 +7,7 @@
 #include "QLabel"
 #include <QPixmap>
 #include <math.h>
-#include "KH_02.hpp"
+//#include "KH_02.hpp"
 #include "QThread"
 #include <QTcpSocket>
 #include <QWaitCondition>

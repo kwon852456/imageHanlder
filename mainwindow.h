@@ -61,7 +61,6 @@ public slots:
     void connectServer(const QString _addr, const int _port);
     void onServerConnected();
     void onAskTask(QString _fPath, int _mode, QString _option = "");
-    void onRequest();
 
 signals:
     void resultReady(const QByteArray result);
