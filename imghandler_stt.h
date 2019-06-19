@@ -22,13 +22,26 @@
 
 using namespace std;
 
-extern const int (*inImg5)[512];
-extern const int (*inImg2)[256];
-extern const int (*inImg1)[128];
+inline void co_byte(QByteArray _arr){
+    qDebug() << __func__;
 
-extern const int (*outImg5)[512];
-extern const int (*outImg2)[256];
-extern const int (*outImg1)[128];
+
+    QString str  = "";
+    QString temp = "";
+
+    for(int i(0) ; i < _arr.length() ; ++i){
+        temp.clear();
+
+        temp.sprintf("0x%02x ", _arr.at(i) );
+
+        str += temp;
+        qDebug() << temp;
+    }
+
+    qDebug() << str;
+
+}
+
 
 
 inline QString path_dial(QMainWindow* _this){
@@ -60,7 +73,6 @@ inline QByteArray ba_file(QFile* _file){
     QByteArray inImg = _file->readAll();
 
     delete _file;
-
     return inImg;
 }
 
@@ -117,6 +129,9 @@ inline QByteArray ba_qs(QString _qstring, int size = 0){
     b_out.append(_qstring.toUtf8());
     b_out.resize(size);
 
+    qDebug() << "b_out :" ;
+    co_byte(b_out);
+
     qDebug() << "size of b_out :" << b_out.length();
 
 
@@ -126,7 +141,7 @@ inline QByteArray ba_qs(QString _qstring, int size = 0){
 inline QByteArray head_enc(QString _fPath, int _mode, QString _option, int imgSize){
     qDebug() << __func__;
 
-    QByteArray metaData = ba_qs(_fPath + ":" + QString::number(_mode) + ":" + _option , 200);
+    QByteArray metaData = ba_qs(_fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
 
     QByteArray header;
 
@@ -145,14 +160,21 @@ inline QByteArray head_enc(QString _fPath, int _mode, QString _option, int imgSi
     qDebug() << "size of metaData        : " << metaData.length   ();
     qDebug() << "size of header          : " << header.length     ();
 
+    qDebug() << "head :" ;
+    co_byte(header);
+
     return header;
 }
 
 
+
 inline QByteArray createProc(QString _fPath, int _mode, QString _option = "None"){
+
     qDebug() << __func__;
     QByteArray b_Img    = ba_file(file_path(_fPath));
-    QByteArray b_header = head_enc( _fPath, _mode,_option, b_Img.length() );
+    QByteArray b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
+
+    co_byte( QByteArray::fromStdString(_fPath.toStdString()) );
 
     return b_header.append(b_Img);
 

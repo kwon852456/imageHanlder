@@ -54,7 +54,7 @@ void MainWindow::createThreads(){
 void MainWindow::makeConnections(){
 
     connect(&socThread , &QThread::finished       , sw   , &QObject::deleteLater       );
-    connect(this       , &MainWindow::askCon     , sw    , &SocWorker::connectServer   );
+    connect(this       , &MainWindow::askCon      , sw   , &SocWorker::connectServer   );
     connect(sw         , &SocWorker::sendMsg      , this , &MainWindow::putStatus      );
     connect(sw         , &SocWorker::resultReady  , this , &MainWindow::handleResults  );
     connect(this       , &MainWindow::askTask     , sw   , &SocWorker::onAskTask       );
@@ -70,30 +70,15 @@ void MainWindow::makeConnections(){
 
 void MainWindow::on_openInImage_triggered()
 {
-    QString path = path_dial(this);
-    emit askTask(path, 0);
+    current_path = path_dial(this);
+    emit askTask( current_path , 0);
     ui->tab_right->setCurrentIndex(1);
 
 }
 
-
-void MainWindow::on_btn_connect_clicked()
-{
-    emit askCon(ui->edit_host->text(),  ui->edit_port->text().toInt());
-}
-
-
-/// 구현 예정 //
-void MainWindow::on_btn_bright_clicked()
-{
-
-}
-
-
-
-
 void MainWindow::handleResults(QByteArray _recvImg ){
     qDebug() << __func__;
+
     lab_pix(pix_img(img_ba(_recvImg)), ui->label_img);
 
     qDebug() << "end recv...";
@@ -107,6 +92,40 @@ void MainWindow::putStatus(QString _text){
 }
 
 
+/////////////////////////////////////////
+///////    MainWindow Events     ////////
+/////////////////////////////////////////
+
+void MainWindow::on_btn_connect_clicked()
+{
+    emit askCon(ui->edit_host->text(),  ui->edit_port->text().toInt());
+}
+
+void MainWindow::on_btn_bright_clicked()
+{
+    emit askTask( current_path , 1, ui->edit_bright->text() );
+}
+
+void MainWindow::on_btn_reverse_clicked()
+{
+    emit askTask( current_path , 2);
+}
+
+void MainWindow::on_btn_bin_clicked()
+{
+    emit askTask( current_path , 3, ui->edit_Thresh->text());
+}
+
+
+void MainWindow::on_btn_para_clicked()
+{
+    emit askTask( current_path , 4  );
+}
+
+void MainWindow::on_btn_rotate_clicked()
+{
+    emit askTask( current_path , 5 , ui->edit_rotate->text() );
+}
 
 
 
@@ -133,14 +152,12 @@ void SocWorker::connectServer(const QString _addr, const int _port){
 
     sendSock->connectToHost(_addr, _port);
 
-
     if(!sendSock->waitForConnected(TIMEOUT)){
         emit sendMsg("server is not responding");
     }
 
+
 }
-
-
 
 void SocWorker::onAskTask(QString _fPath, int _mode, QString _option){
     qDebug() << __func__;

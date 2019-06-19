@@ -34,14 +34,22 @@ signals:
 
 private slots:
     void on_btn_bright_clicked();
-
     void on_btn_connect_clicked();
+
+    void on_btn_reverse_clicked();
+
+    void on_btn_bin_clicked();
+
+    void on_btn_para_clicked();
+
+    void on_btn_rotate_clicked();
 
 private:
     Ui::MainWindow *ui;
     QThread socThread;
     QByteArray inImg;
     SocWorker* sw;
+    QString current_path;
 };
 
 
