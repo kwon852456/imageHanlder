@@ -24,6 +24,16 @@ MainWindow::MainWindow(QWidget *parent) :
     createThreads();
     makeConnections();
 
+
+    ///////////////////////////////////
+    /////////  Debug Routin  //////////
+    ///////////////////////////////////
+
+    on_openInImage_triggered();
+
+    //////// End Debug Routin ////////
+
+
 }
 
 MainWindow::~MainWindow()
@@ -53,11 +63,12 @@ void MainWindow::createThreads(){
 
 void MainWindow::makeConnections(){
 
-    connect(&socThread , &QThread::finished       , sw   , &QObject::deleteLater       );
-    connect(this       , &MainWindow::askCon      , sw   , &SocWorker::connectServer   );
-    connect(sw         , &SocWorker::sendMsg      , this , &MainWindow::putStatus      );
-    connect(sw         , &SocWorker::resultReady  , this , &MainWindow::handleResults  );
-    connect(this       , &MainWindow::askTask     , sw   , &SocWorker::onAskTask       );
+    connect(&socThread      , &QThread   ::finished       , sw   , &QObject ::deleteLater     );
+    connect(this            , &MainWindow::askCon      , sw   , &SocWorker  ::connectServer   );
+    connect(sw              , &SocWorker ::sendMsg      , this , &MainWindow::putStatus       );
+    connect(sw              , &SocWorker ::resultReady  , this , &MainWindow::handleResults   );
+    connect(this            , &MainWindow::askTask     , sw   , &SocWorker  ::onAskTask       );
+    connect(ui->label_paint , &PaintLabel::roiSelect   , this , &MainWindow ::on_RoiSelect    );
 
 }
 
@@ -65,16 +76,9 @@ void MainWindow::makeConnections(){
 
 
 /////////////////////////////////////////
-///////   MainWindow Funtions    ////////
+///////    MainWindow Slots      ////////
 /////////////////////////////////////////
 
-void MainWindow::on_openInImage_triggered()
-{
-    current_path = path_dial(this);
-    emit askTask( current_path , 0);
-    ui->tab_right->setCurrentIndex(1);
-
-}
 
 void MainWindow::handleResults(QByteArray _recvImg ){
     qDebug() << __func__;
@@ -95,6 +99,55 @@ void MainWindow::putStatus(QString _text){
 /////////////////////////////////////////
 ///////    MainWindow Events     ////////
 /////////////////////////////////////////
+
+void MainWindow::on_openInImage_triggered()
+{
+    QTime time;
+    time.start();
+
+    ///////////////////////////////////
+    /////////  Debug Routin  //////////
+    ///////////////////////////////////
+
+
+
+    QImage* img     = img_path("/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat01_512.png");
+    qDebug() << img->sizeInBytes();
+
+    QGenericMatrix<512, 512, unsigned char> R;
+    QGenericMatrix<512, 512, unsigned char> G;
+    QGenericMatrix<512, 512, unsigned char> B;
+
+
+    for ( int row = 0; row < img->height() ; ++row )
+        for ( int col = 0; col < img->width(); ++col )
+        {
+
+            QColor clrCurrent( img->pixel( col, row ) );
+            *(R.data() + (img->height() * row) + col) = clrCurrent.red();
+            *(G.data() + (img->height() * row) + col) = clrCurrent.green();
+            *(B.data() + (img->height() * row) + col) = clrCurrent.blue();
+
+        }
+
+
+    QByteArray arr_R = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
+    QByteArray arr_G = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
+    QByteArray arr_B = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
+
+    lab_pix(pix_img(img_ba(arr_R)), ui->label_img);
+
+    qDebug() << time.elapsed();
+
+
+    //////// End Debug Routin ////////
+
+//    current_path = path_dial(this);
+//    emit askTask( current_path , 0);
+//    ui->tab_right->setCurrentIndex(1);
+
+}
+
 
 void MainWindow::on_btn_connect_clicked()
 {
@@ -127,6 +180,9 @@ void MainWindow::on_btn_rotate_clicked()
     emit askTask( current_path , 5 , ui->edit_rotate->text() );
 }
 
+void MainWindow::on_RoiSelect(QVector<QPoint> _points){
+    qDebug() << "points : " << _points;
+}
 
 
 /////////////////////////////////////////
@@ -170,7 +226,46 @@ void SocWorker::onAskTask(QString _fPath, int _mode, QString _option){
     qDebug() << "Reading: " << sendSock->bytesAvailable();
 
     QByteArray recvData = sendSock->readAll();
+
     emit resultReady(recvData);
+
+}
+
+PaintLabel::PaintLabel( QWidget * parent)
+    : QLabel( parent ) {}
+
+void PaintLabel::mousePressEvent ( QMouseEvent* e )
+{
+    p = e->pos();
+    if(points.size() > 4) points.clear();
+
+    if(e -> button() == Qt::LeftButton){
+        points.push_back(p);
+
+        if(points.size() > 3){
+            emit roiSelect(points);
+            points.push_back(points.at(0));
+        }
+
+    }else if(e->button() == Qt::RightButton){
+        points.clear();
+    }
+
+    update();
+
+}
+
+void PaintLabel::paintEvent( QPaintEvent * e ){
+
+    QPainter painter(this);
+    QPen paintpen(Qt::red);
+    paintpen.setWidth(5);
+
+    painter.setPen(paintpen);
+//    painter.drawPoint(p);
+
+    painter.drawPolyline(points);
+
 
 }
 

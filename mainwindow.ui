@@ -7,24 +7,24 @@
     <x>0</x>
     <y>0</y>
     <width>939</width>
-    <height>416</height>
+    <height>580</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QLabel" name="label_img">
+   <widget class="PaintLabel" name="label_paint">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>20</y>
-      <width>501</width>
-      <height>321</height>
+      <x>20</x>
+      <y>10</y>
+      <width>512</width>
+      <height>512</height>
      </rect>
     </property>
     <property name="text">
-     <string>No Image To Display Yet....!</string>
+     <string/>
     </property>
    </widget>
    <widget class="QTabWidget" name="tab_right">
@@ -32,12 +32,15 @@
      <rect>
       <x>570</x>
       <y>0</y>
-      <width>331</width>
-      <height>361</height>
+      <width>351</width>
+      <height>531</height>
      </rect>
     </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::DefaultContextMenu</enum>
+    </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -201,7 +204,7 @@
         <x>10</x>
         <y>50</y>
         <width>261</width>
-        <height>23</height>
+        <height>27</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -227,7 +230,7 @@
         <x>10</x>
         <y>20</y>
         <width>261</width>
-        <height>23</height>
+        <height>27</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -253,7 +256,7 @@
         <x>10</x>
         <y>80</y>
         <width>261</width>
-        <height>23</height>
+        <height>27</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -275,6 +278,22 @@
      </widget>
     </widget>
    </widget>
+   <widget class="QLabel" name="label_img">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>10</y>
+      <width>512</width>
+      <height>512</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>No Image To Display.</string>
+    </property>
+   </widget>
+   <zorder>tab_right</zorder>
+   <zorder>label_img</zorder>
+   <zorder>label_paint</zorder>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -282,7 +301,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menufile">
@@ -291,7 +310,13 @@
     </property>
     <addaction name="openInImage"/>
    </widget>
+   <widget class="QMenu" name="menuConfigure">
+    <property name="title">
+     <string>Configure</string>
+    </property>
+   </widget>
    <addaction name="menufile"/>
+   <addaction name="menuConfigure"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="openInImage">
@@ -301,6 +326,13 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>PaintLabel</class>
+   <extends>QLabel</extends>
+   <header>mainwindow.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

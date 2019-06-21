@@ -30,6 +30,7 @@ SOURCES += \
 
 HEADERS += \
         ../KH_01/KH_02.hpp \
+        KH_01.hpp \
         imghandler_stt.h \
         mainwindow.h
 
@@ -37,9 +38,7 @@ FORMS += \
         mainwindow.ui
 
 INCLUDEPATH += \
-            /home/hyeok/ \
-            /home/hyeok/Downloads/backup\0hpp \
-            ../KH_01/
+            ../Eigen
 
 
 # Default rules for deployment.

@@ -7,13 +7,20 @@
 #include "QLabel"
 #include <QPixmap>
 #include <math.h>
-//#include "KH_02.hpp"
 #include "QThread"
 #include <QTcpSocket>
 #include <QWaitCondition>
 #include <QTcpServer>
 #include <QMessageBox>
 #include <QNetworkInterface>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QVector>
+#include <KH_01.hpp>
+#include <QTime>
+#include <QMatrix>
+#include <QGenericMatrix>
+
 
 /////////////////////////////////////////
 ///////    static functions    //////////
@@ -79,10 +86,19 @@ inline QByteArray ba_file(QFile* _file){
 
 
 inline QImage* img_ba(QByteArray _inImg){
+    int size = sqrt( _inImg.length() );
+    QImage* image = new QImage( reinterpret_cast<unsigned char*> ( _inImg.data() ), size , size, QImage::Format_Grayscale8);
 
-    int size = sqrt(_inImg.length());
-    QImage* image = new QImage( reinterpret_cast<unsigned char*> ( _inImg.data() ), size, size, QImage::Format_Grayscale8);
+    return image;
 
+}
+
+inline QImage* img_path(QString _imgPath){
+
+//    QImage tepImage(_imgPath);
+//    QImage* image = new QImage(tepImage.convertToFormat(QImage::Format_RGB888)) ;
+
+    QImage* image = new QImage(_imgPath);
 
     return image;
 
@@ -180,6 +196,9 @@ inline QByteArray createProc(QString _fPath, int _mode, QString _option = "None"
 
 }
 
+inline RGB_path(QString _path){
+
+}
 
 
 

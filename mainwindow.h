@@ -34,6 +34,7 @@ signals:
 
 private slots:
     void on_btn_bright_clicked();
+
     void on_btn_connect_clicked();
 
     void on_btn_reverse_clicked();
@@ -43,6 +44,8 @@ private slots:
     void on_btn_para_clicked();
 
     void on_btn_rotate_clicked();
+
+    void on_RoiSelect(QVector<QPoint> _points);
 
 private:
     Ui::MainWindow *ui;
@@ -80,6 +83,28 @@ private:
     QString port;
     QTcpSocket* sendSock;
 
+};
+
+
+/////////////////////////////////////////
+//////////  ImageLabel Class  ///////////
+/////////////////////////////////////////
+
+
+class PaintLabel : public QLabel
+{
+    Q_OBJECT
+public:
+    PaintLabel(QWidget *parent = nullptr);
+    void mousePressEvent ( QMouseEvent * ev );
+    void paintEvent      ( QPaintEvent * e  );
+
+signals:
+    void roiSelect(QVector<QPoint> _points);
+
+private:
+    QPoint p;
+    QVector<QPoint> points;
 };
 
 
