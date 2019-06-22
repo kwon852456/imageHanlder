@@ -100,44 +100,21 @@ void MainWindow::putStatus(QString _text){
 ///////    MainWindow Events     ////////
 /////////////////////////////////////////
 
+
+
+
 void MainWindow::on_openInImage_triggered()
 {
-    QTime time;
-    time.start();
 
     ///////////////////////////////////
     /////////  Debug Routin  //////////
     ///////////////////////////////////
 
+    QImage* img2     = colImg_ba( ba_decode( encode_path("/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat01_512.png", 50),50 ));
 
 
-    QImage* img     = img_path("/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat01_512.png");
-    qDebug() << img->sizeInBytes();
 
-    QGenericMatrix<512, 512, unsigned char> R;
-    QGenericMatrix<512, 512, unsigned char> G;
-    QGenericMatrix<512, 512, unsigned char> B;
-
-
-    for ( int row = 0; row < img->height() ; ++row )
-        for ( int col = 0; col < img->width(); ++col )
-        {
-
-            QColor clrCurrent( img->pixel( col, row ) );
-            *(R.data() + (img->height() * row) + col) = clrCurrent.red();
-            *(G.data() + (img->height() * row) + col) = clrCurrent.green();
-            *(B.data() + (img->height() * row) + col) = clrCurrent.blue();
-
-        }
-
-
-    QByteArray arr_R = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
-    QByteArray arr_G = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
-    QByteArray arr_B = QByteArray::fromRawData(reinterpret_cast<char*>(R.data()), 512 * 512);
-
-    lab_pix(pix_img(img_ba(arr_R)), ui->label_img);
-
-    qDebug() << time.elapsed();
+    lab_pix(pix_img(img2), ui->label_img);
 
 
     //////// End Debug Routin ////////
@@ -147,6 +124,7 @@ void MainWindow::on_openInImage_triggered()
 //    ui->tab_right->setCurrentIndex(1);
 
 }
+
 
 
 void MainWindow::on_btn_connect_clicked()
