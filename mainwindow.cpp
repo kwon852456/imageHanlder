@@ -29,7 +29,8 @@ MainWindow::MainWindow(QWidget *parent) :
     /////////  Debug Routin  //////////
     ///////////////////////////////////
 
-    on_openInImage_triggered();
+    on_btn_connect_clicked();
+
 
     //////// End Debug Routin ////////
 
@@ -83,9 +84,10 @@ void MainWindow::makeConnections(){
 void MainWindow::handleResults(QByteArray _recvImg ){
     qDebug() << __func__;
 
-    lab_pix(pix_img(img_ba(_recvImg)), ui->label_img);
+    ui->label_img->clear();
 
-    qDebug() << "end recv...";
+    lab_pix(pix_img(colImg_ba(&_recvImg, imgWidth, imgHeight)), ui->label_img);
+    qDebug() << "recv size : " << _recvImg.length();
 
 }
 
@@ -106,22 +108,21 @@ void MainWindow::putStatus(QString _text){
 void MainWindow::on_openInImage_triggered()
 {
 
-    ///////////////////////////////////
-    /////////  Debug Routin  //////////
-    ///////////////////////////////////
-
-    QImage* img2     = colImg_ba( ba_decode( encode_path("/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat01_512.png", 50),50 ));
-
-
-
-    lab_pix(pix_img(img2), ui->label_img);
-
-
-    //////// End Debug Routin ////////
 
 //    current_path = path_dial(this);
-//    emit askTask( current_path , 0);
-//    ui->tab_right->setCurrentIndex(1);
+    current_path = "/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat06_512.png";
+    QImage* tempImg = img_path(current_path);
+    imgWidth    = tempImg->width() ;
+    imgHeight   = tempImg->height();
+    sizeOption  = "|" + QString::number(imgWidth) + "|" + QString::number(imgHeight) + "|";
+
+    qDebug() << current_path;
+
+    emit askTask( current_path , 0, is_compressing ,sizeOption ) ;
+
+    delete tempImg;
+
+    ui->tab_right->setCurrentIndex(1);
 
 }
 
@@ -134,33 +135,67 @@ void MainWindow::on_btn_connect_clicked()
 
 void MainWindow::on_btn_bright_clicked()
 {
-    emit askTask( current_path , 1, ui->edit_bright->text() );
+    qDebug() << ui->edit_bright->text();
+    emit askTask( current_path , 1,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + ui->edit_bright->text() );
 }
 
 void MainWindow::on_btn_reverse_clicked()
 {
-    emit askTask( current_path , 2);
+    emit askTask( current_path , 2,is_compressing,
+                  sizeOption + "|" + is_compressing);
 }
 
 void MainWindow::on_btn_bin_clicked()
 {
-    emit askTask( current_path , 3, ui->edit_Thresh->text());
+    emit askTask( current_path , 3, is_compressing,
+                  sizeOption + "|" + is_compressing+ "|" + ui->edit_Thresh->text());
 }
-
 
 void MainWindow::on_btn_para_clicked()
 {
-    emit askTask( current_path , 4  );
+    emit askTask( current_path,  4, is_compressing,
+                  sizeOption + "|" + is_compressing   );
 }
 
 void MainWindow::on_btn_rotate_clicked()
 {
-    emit askTask( current_path , 5 , ui->edit_rotate->text() );
+    emit askTask( current_path,  5,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + ui->edit_rotate->text() );
 }
 
 void MainWindow::on_RoiSelect(QVector<QPoint> _points){
     qDebug() << "points : " << _points;
 }
+
+void MainWindow::on_check_compress_clicked(bool checked)
+{
+    if(checked){ is_compressing = true; }
+    else{  is_compressing = false;  }
+}
+
+void MainWindow::on_btn_zoomOut_clicked()
+{
+    emit askTask( current_path,  6,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+
+}
+
+
+
+void MainWindow::on_btn_zoomIn_clicked()
+{
+    emit askTask( current_path,  7,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+
+void MainWindow::on_btn_hist_clicked()
+{
+    emit askTask( current_path,  8,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
 
 
 /////////////////////////////////////////
@@ -169,9 +204,15 @@ void MainWindow::on_RoiSelect(QVector<QPoint> _points){
 
 SocWorker::SocWorker(){
 
-    sendSock = new QTcpSocket(this);
-    connect(sendSock, &QTcpSocket::connected     , this, &SocWorker::onServerConnected);
+    sendSock  = new QTcpSocket(this);
+    connect(sendSock,  &QTcpSocket::connected     , this, &SocWorker::onServerConnected);
+    connect(sendSock,  &QTcpSocket::readyRead     , this, &SocWorker::onRecv           );
 
+
+}
+
+SocWorker::~SocWorker(){
+    sendSock->close();
 }
 void SocWorker::onServerConnected(){
 
@@ -193,21 +234,55 @@ void SocWorker::connectServer(const QString _addr, const int _port){
 
 }
 
-void SocWorker::onAskTask(QString _fPath, int _mode, QString _option){
+void SocWorker::onAskTask(QString _fPath, int _mode, bool compress, QString _option ){
     qDebug() << __func__;
-    QByteArray proc = createProc(_fPath, _mode, _option);
+
+    QByteArray proc = createProc(_fPath, _mode, compress, _option);
+
+    qDebug() << "send data size : " << proc.length();
+
+    sendSock->flush();
 
     sendSock->write(proc);
     sendSock->waitForBytesWritten(1000);
-    sendSock->waitForReadyRead(3000);
-
-    qDebug() << "Reading: " << sendSock->bytesAvailable();
-
-    QByteArray recvData = sendSock->readAll();
-
-    emit resultReady(recvData);
 
 }
+
+void SocWorker::onRecv(){
+
+    if(is_recvStart != true){
+
+        char header[4];
+        sendSock -> read(header, 4);
+
+        targetLength = *reinterpret_cast<int*>(header);
+        is_recvStart = true;
+
+        recvData.clear();
+    }
+
+    recvData.push_back(sendSock->readAll());
+
+    if(recvData.length() == targetLength){
+
+        emit resultReady( recvData );
+        is_recvStart = false;
+
+        targetLength = -1;
+
+    }
+
+
+}
+
+
+
+/////////////////////////////////////////
+///////   PaintLaBel  Class   ///////////
+/////////////////////////////////////////
+
+
+
 
 PaintLabel::PaintLabel( QWidget * parent)
     : QLabel( parent ) {}
@@ -246,4 +321,5 @@ void PaintLabel::paintEvent( QPaintEvent * e ){
 
 
 }
+
 

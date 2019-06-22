@@ -29,8 +29,12 @@ public slots:
 
 signals:
     void askCon(const QString _addr, const int _port);
-    void askTask(QString _fPath, int _mode, QString = "");
+    void askTask(QString _fPath, int _mode, bool compress, QString _option = "" );
 
+private:
+   int imgWidth  = -1;
+   int imgHeight = -1;
+   QString sizeOption  = "";
 
 private slots:
     void on_btn_bright_clicked();
@@ -47,12 +51,22 @@ private slots:
 
     void on_RoiSelect(QVector<QPoint> _points);
 
+    void on_check_compress_clicked(bool checked);
+
+    void on_btn_zoomOut_clicked();
+
+    void on_btn_zoomIn_clicked();
+
+    void on_btn_hist_clicked();
+
 private:
     Ui::MainWindow *ui;
     QThread socThread;
     QByteArray inImg;
     SocWorker* sw;
     QString current_path;
+
+    bool is_compressing = false;
 };
 
 
@@ -66,12 +80,14 @@ class SocWorker : public QObject{
 
 public:
     SocWorker();
+   ~SocWorker();
 
 
 public slots:
     void connectServer(const QString _addr, const int _port);
     void onServerConnected();
-    void onAskTask(QString _fPath, int _mode, QString _option = "");
+    void onAskTask(QString _fPath, int _mode, bool compress, QString _option = ""  );
+    void onRecv();
 
 signals:
     void resultReady(const QByteArray result);
@@ -82,7 +98,9 @@ private:
     QString hostName;
     QString port;
     QTcpSocket* sendSock;
-
+    QByteArray recvData;
+    int targetLength = -1;
+    bool is_recvStart = false;
 };
 
 
@@ -103,6 +121,7 @@ signals:
     void roiSelect(QVector<QPoint> _points);
 
 private:
+
     QPoint p;
     QVector<QPoint> points;
 };

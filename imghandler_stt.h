@@ -20,6 +20,7 @@
 #include <QTime>
 #include <QMatrix>
 #include <QGenericMatrix>
+#include <QTimer>
 
 
 /////////////////////////////////////////
@@ -53,7 +54,7 @@ inline void co_byte(QByteArray _arr){
 
 inline QString path_dial(QMainWindow* _this){
 
-    QString strFilter = "bitmap file (*.RAW) ;; bitmap file (*.raw) ;; All files (*.*)";
+    QString strFilter = "bitmap file (*.png) ;; All files (*.*)";
     QString strFileName = QFileDialog::getOpenFileName(_this, "Open a file", QDir::homePath() , strFilter);
 
     return strFileName;
@@ -93,8 +94,8 @@ inline QImage* img_ba(QByteArray _inImg){
 
 }
 
-inline QImage* colImg_ba(QByteArray* _inImg, int size = 512){
-    QImage* image = new QImage( reinterpret_cast<unsigned char*> ( _inImg -> data() ), size , size, QImage::Format_RGB888);
+inline QImage* colImg_ba(QByteArray* _inImg, int width = 512, int height = 512){
+    QImage* image = new QImage( reinterpret_cast<unsigned char*> ( _inImg -> data() ), width , height, QImage::Format_RGB888);
 
     return image;
 
@@ -103,10 +104,10 @@ inline QImage* colImg_ba(QByteArray* _inImg, int size = 512){
 
 inline QImage* img_path(QString _imgPath){
 
-//    QImage tepImage(_imgPath);
-//    QImage* image = new QImage(tepImage.convertToFormat(QImage::Format_RGB888)) ;
+    QImage tepImage(_imgPath);
+    QImage* image = new QImage(tepImage.convertToFormat(QImage::Format_RGB888)) ;
 
-    QImage* image = new QImage(_imgPath);
+    qDebug() << "image byteSize : " << image->sizeInBytes();
 
     return image;
 
@@ -126,7 +127,6 @@ inline QPixmap* pix_img(QImage* _img){
 }
 
 inline void lab_pix(QPixmap* _pix, QLabel* _label){
-    _label  ->  resize       (  _pix->width(),_pix->height()  );
     _label  ->  setPixmap    (  *_pix                         );
 
     delete _pix;
@@ -153,19 +153,17 @@ inline QByteArray ba_qs(QString _qstring, int size = 0){
     b_out.append(_qstring.toUtf8());
     b_out.resize(size);
 
-    qDebug() << "b_out :" ;
-    co_byte(b_out);
-
-    qDebug() << "size of b_out :" << b_out.length();
-
-
     return b_out;
 }
 
 inline QByteArray head_enc(QString _fPath, int _mode, QString _option, int imgSize){
     qDebug() << __func__;
 
-    QByteArray metaData = ba_qs(_fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
+    #ifdef Q_OS_LINUX
+    QByteArray metaData = ba_qs( "C:" +_fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
+    #elif
+    QByteArray metaData = ba_qs( _fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
+    #endif
 
     QByteArray header;
 
@@ -177,32 +175,23 @@ inline QByteArray head_enc(QString _fPath, int _mode, QString _option, int imgSi
     headerOut << totalLength;
 
     header.append(metaData);
+    QStringList info = _option.split("|");
+    qDebug() << "Option Value    : " << info                    ;
 
     qDebug() << "size of image           : " << imgSize             ;
-    qDebug() << "size of image height    : " << sqrt(imgSize)       ;
+    qDebug() << "size of image Width     : " << info[1]             ;
+    qDebug() << "size of image height    : " << info[2]             ;
     qDebug() << "size of totalLength     : " << totalLength         ;
     qDebug() << "size of metaData        : " << metaData.length   ();
     qDebug() << "size of header          : " << header.length     ();
 
-    qDebug() << "head :" ;
-    co_byte(header);
+
 
     return header;
 }
 
 
 
-inline QByteArray createProc(QString _fPath, int _mode, QString _option = "None"){
-
-    qDebug() << __func__;
-    QByteArray b_Img    = ba_file(file_path(_fPath));
-    QByteArray b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
-
-    co_byte( QByteArray::fromStdString(_fPath.toStdString()) );
-
-    return b_header.append(b_Img);
-
-}
 
 inline void con_16bytes(QByteArray* arr) {
 
@@ -300,8 +289,16 @@ inline void con_byte(QByteArray* arr , int offset = 0) {
     qDebug() << msg;
 }
 
+inline void con_byte(unsigned char* arr, int offset = 0) {
 
-inline void co_arrMat(QByteArray* arr, int row = 512 , int col= 25){
+    QString msg;
+    msg.sprintf("0x%02x ", *(arr + offset ));
+
+    qDebug() << msg;
+}
+
+
+inline void co_arrMat(QByteArray* arr, int row = 512 , int col= 25, int cellDataSize = 8){
         Eigen::Matrix<double,Dynamic, Dynamic> A;
         A.resize(row,col);
 
@@ -309,8 +306,8 @@ inline void co_arrMat(QByteArray* arr, int row = 512 , int col= 25){
         for (int i = 0 ; i < row ; ++i){
             for(int j = 0 ; j < col ; ++j){
                 temp.clear();
-                for(int x = 0 ; x < 8 ; ++x){
-                    temp.append(*(arr->constData() + (i * (col * 8) ) + (j * 8) + x  ));
+                for(int x = 0 ; x < cellDataSize ; ++x){
+                    temp.append(*(arr->constData() + (i * (col * cellDataSize) ) + (j * cellDataSize) + x  ));
                 }
                 A(i , j) = (*(double*)temp.constData());
             }
@@ -452,7 +449,7 @@ inline QByteArray* encode_512(Eigen::Matrix<float,Dynamic,Dynamic> _mat, int ran
 
 }
 
-inline QByteArray* encode_path(QString _path, int rank = 25){
+inline QByteArray encode_path(QString _path, int rank = 25){
     QImage* img     = img_path(_path);
 
     Eigen::Matrix<float, Dynamic,Dynamic,RowMajor> R;
@@ -479,10 +476,10 @@ inline QByteArray* encode_path(QString _path, int rank = 25){
     QByteArray* arr_G = encode_512(G, rank);
     QByteArray* arr_B = encode_512(B, rank);
 
-    QByteArray* sum = new QByteArray();
-    sum->push_back(*arr_R);
-    sum->push_back(*arr_G);
-    sum->push_back(*arr_B);
+    QByteArray sum;
+    sum.push_back(*arr_R);
+    sum.push_back(*arr_G);
+    sum.push_back(*arr_B);
 
     delete arr_R;
     delete arr_G;
@@ -491,5 +488,25 @@ inline QByteArray* encode_path(QString _path, int rank = 25){
     return sum;
 }
 
+inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _option = "None"){
+
+    QByteArray b_Img;
+    QByteArray b_header;
+    qDebug() << "compress : " << compress;
+    if(compress){
+
+        b_Img    = encode_path(_fPath, 50);
+        b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
+
+    }else{
+        QImage* tempImg = img_path(_fPath);
+        b_Img    = QByteArray( reinterpret_cast<char*>(tempImg->bits()), tempImg->sizeInBytes() );
+        b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
+
+    }
+
+    return b_header.append(b_Img);
+
+}
 
 #endif // IMGHANDLER_STT_H

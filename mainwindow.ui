@@ -40,7 +40,7 @@
      <enum>Qt::DefaultContextMenu</enum>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -193,6 +193,45 @@
        <string>회 전</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="btn_zoomOut">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>170</y>
+        <width>231</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>축 소</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="btn_zoomIn">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>200</y>
+        <width>231</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>확 대</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="btn_hist">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>230</y>
+        <width>231</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>히 스 토 그 램</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
@@ -202,7 +241,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>50</y>
+        <y>80</y>
         <width>261</width>
         <height>27</height>
        </rect>
@@ -228,7 +267,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>20</y>
+        <y>50</y>
         <width>261</width>
         <height>27</height>
        </rect>
@@ -254,7 +293,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>80</y>
+        <y>110</y>
         <width>261</width>
         <height>27</height>
        </rect>
@@ -275,6 +314,24 @@
         </widget>
        </item>
       </layout>
+     </widget>
+     <widget class="QSplitter" name="splitter">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>159</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QCheckBox" name="check_compress">
+       <property name="text">
+        <string>압축</string>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>
