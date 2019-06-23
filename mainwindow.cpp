@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     createThreads();
     makeConnections();
+    on_check_Log_clicked(false);
 
 
     ///////////////////////////////////
@@ -64,15 +65,15 @@ void MainWindow::createThreads(){
 
 void MainWindow::makeConnections(){
 
-    connect(&socThread      , &QThread   ::finished       , sw   , &QObject ::deleteLater     );
-    connect(this            , &MainWindow::askCon      , sw   , &SocWorker  ::connectServer   );
-    connect(sw              , &SocWorker ::sendMsg      , this , &MainWindow::putStatus       );
-    connect(sw              , &SocWorker ::resultReady  , this , &MainWindow::handleResults   );
-    connect(this            , &MainWindow::askTask     , sw   , &SocWorker  ::onAskTask       );
-    connect(ui->label_paint , &PaintLabel::roiSelect   , this , &MainWindow ::on_RoiSelect    );
+    connect(&socThread      , &QThread   :: finished     , sw   , &QObject    :: deleteLater        );
+    connect(this            , &MainWindow:: askCon       , sw   , &SocWorker  :: connectServer      );
+    connect(this            , &MainWindow:: askDisCon    , sw   , &SocWorker  :: disConnectServer   );
+    connect(sw              , &SocWorker :: sendMsg      , this , &MainWindow :: putStatus          );
+    connect(sw              , &SocWorker :: resultReady  , this , &MainWindow :: handleResults      );
+    connect(this            , &MainWindow:: askTask      , sw   , &SocWorker  :: onAskTask          );
+    connect(ui->label_paint , &PaintLabel:: roiSelect    , this , &MainWindow :: on_RoiSelect       );
 
 }
-
 
 
 
@@ -97,104 +98,6 @@ void MainWindow::putStatus(QString _text){
 
 }
 
-
-/////////////////////////////////////////
-///////    MainWindow Events     ////////
-/////////////////////////////////////////
-
-
-
-
-void MainWindow::on_openInImage_triggered()
-{
-
-
-//    current_path = path_dial(this);
-    current_path = "/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat06_512.png";
-    QImage* tempImg = img_path(current_path);
-    imgWidth    = tempImg->width() ;
-    imgHeight   = tempImg->height();
-    sizeOption  = "|" + QString::number(imgWidth) + "|" + QString::number(imgHeight) + "|";
-
-    qDebug() << current_path;
-
-    emit askTask( current_path , 0, is_compressing ,sizeOption ) ;
-
-    delete tempImg;
-
-    ui->tab_right->setCurrentIndex(1);
-
-}
-
-
-
-void MainWindow::on_btn_connect_clicked()
-{
-    emit askCon(ui->edit_host->text(),  ui->edit_port->text().toInt());
-}
-
-void MainWindow::on_btn_bright_clicked()
-{
-    qDebug() << ui->edit_bright->text();
-    emit askTask( current_path , 1,is_compressing ,
-                  sizeOption + "|" + is_compressing + "|" + ui->edit_bright->text() );
-}
-
-void MainWindow::on_btn_reverse_clicked()
-{
-    emit askTask( current_path , 2,is_compressing,
-                  sizeOption + "|" + is_compressing);
-}
-
-void MainWindow::on_btn_bin_clicked()
-{
-    emit askTask( current_path , 3, is_compressing,
-                  sizeOption + "|" + is_compressing+ "|" + ui->edit_Thresh->text());
-}
-
-void MainWindow::on_btn_para_clicked()
-{
-    emit askTask( current_path,  4, is_compressing,
-                  sizeOption + "|" + is_compressing   );
-}
-
-void MainWindow::on_btn_rotate_clicked()
-{
-    emit askTask( current_path,  5,is_compressing ,
-                  sizeOption + "|" + is_compressing + "|" + ui->edit_rotate->text() );
-}
-
-void MainWindow::on_RoiSelect(QVector<QPoint> _points){
-    qDebug() << "points : " << _points;
-}
-
-void MainWindow::on_check_compress_clicked(bool checked)
-{
-    if(checked){ is_compressing = true; }
-    else{  is_compressing = false;  }
-}
-
-void MainWindow::on_btn_zoomOut_clicked()
-{
-    emit askTask( current_path,  6,is_compressing ,
-                  sizeOption + "|" + is_compressing );
-
-}
-
-
-
-void MainWindow::on_btn_zoomIn_clicked()
-{
-    emit askTask( current_path,  7,is_compressing ,
-                  sizeOption + "|" + is_compressing );
-}
-
-
-void MainWindow::on_btn_hist_clicked()
-{
-    emit askTask( current_path,  8,is_compressing ,
-                  sizeOption + "|" + is_compressing );
-}
 
 
 
@@ -231,6 +134,12 @@ void SocWorker::connectServer(const QString _addr, const int _port){
         emit sendMsg("server is not responding");
     }
 
+}
+
+void SocWorker::disConnectServer(){
+
+    sendSock->close();
+    emit sendMsg("Disconected from server..!");
 
 }
 
@@ -271,8 +180,6 @@ void SocWorker::onRecv(){
         targetLength = -1;
 
     }
-
-
 }
 
 
@@ -280,9 +187,6 @@ void SocWorker::onRecv(){
 /////////////////////////////////////////
 ///////   PaintLaBel  Class   ///////////
 /////////////////////////////////////////
-
-
-
 
 PaintLabel::PaintLabel( QWidget * parent)
     : QLabel( parent ) {}
@@ -323,3 +227,131 @@ void PaintLabel::paintEvent( QPaintEvent * e ){
 }
 
 
+/////////////////////////////////////////
+///////    MainWindow Events     ////////
+/////////////////////////////////////////
+
+
+
+
+void MainWindow::on_openInImage_triggered()
+{
+
+
+//    current_path = path_dial(this);
+    current_path = "/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat06_512.png";
+    QImage* tempImg = img_path(current_path);
+
+    imgWidth    = tempImg->width() ;
+    imgHeight   = tempImg->height();
+
+    sizeOption  = "|" + QString::number(imgWidth) + "|" + QString::number(imgHeight) + "|";
+
+    qDebug() << current_path;
+
+    emit askTask( current_path , 0, is_compressing ,sizeOption ) ;
+
+    delete tempImg;
+
+    ui->tab_right->setCurrentIndex(1);
+
+}
+
+void MainWindow::on_check_Log_clicked(bool checked)
+{
+    if(checked){
+        ui->edit_log->show();
+        this->setFixedHeight(713);
+    }else{
+        ui->edit_log->hide();
+        this->setFixedHeight(583);
+    }
+}
+
+
+
+void MainWindow::on_btn_connect_clicked()
+{
+    emit askCon(ui->edit_host->text(),  ui->edit_port->text().toInt());
+}
+
+void MainWindow::on_btn_bright_clicked()
+{
+    qDebug() << ui->edit_bright->text();
+    emit askTask( current_path , 1,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + ui->edit_bright->text() );
+}
+
+void MainWindow::on_btn_reverse_clicked()
+{
+    emit askTask( current_path , 2,is_compressing,
+                  sizeOption + "|" + is_compressing);
+}
+
+void MainWindow::on_btn_bin_clicked()
+{
+    emit askTask( current_path , 3, is_compressing,
+                  sizeOption + "|" + is_compressing+ "|" + ui->edit_Thresh->text());
+}
+
+void MainWindow::on_btn_para_clicked()
+{
+    emit askTask( current_path,  4, is_compressing,
+                  sizeOption + "|" + is_compressing   );
+}
+
+void MainWindow::on_btn_rotate_clicked()
+{
+    emit askTask( current_path,  5,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + ui->edit_rotate->text() );
+}
+
+
+void MainWindow::on_check_compress_clicked(bool checked)
+{
+    if(checked){ is_compressing = true; }
+    else{  is_compressing = false;  }
+}
+
+void MainWindow::on_btn_zoomOut_clicked()
+{
+    emit askTask( current_path,  6,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+
+}
+
+void MainWindow::on_btn_zoomIn_clicked()
+{
+    emit askTask( current_path,  7,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+
+void MainWindow::on_btn_hist_clicked()
+{
+    emit askTask( current_path,  8,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+void MainWindow::on_btn_homography_clicked()
+{
+
+    emit askTask( current_path,  9,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+void MainWindow::on_btn_emboss_clicked()
+{
+    emit askTask( current_path,  10,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+
+void MainWindow::on_RoiSelect(QVector<QPoint> _points){
+    qDebug() << "points : " << _points;
+}
+
+void MainWindow::on_btn_disconnect_clicked()
+{
+    emit askDisCon();
+}

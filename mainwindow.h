@@ -29,6 +29,7 @@ public slots:
 
 signals:
     void askCon(const QString _addr, const int _port);
+    void askDisCon();
     void askTask(QString _fPath, int _mode, bool compress, QString _option = "" );
 
 private:
@@ -59,6 +60,14 @@ private slots:
 
     void on_btn_hist_clicked();
 
+    void on_btn_homography_clicked();
+
+    void on_check_Log_clicked(bool checked);
+
+    void on_btn_emboss_clicked();
+
+    void on_btn_disconnect_clicked();
+
 private:
     Ui::MainWindow *ui;
     QThread socThread;
@@ -85,6 +94,7 @@ public:
 
 public slots:
     void connectServer(const QString _addr, const int _port);
+    void disConnectServer();
     void onServerConnected();
     void onAskTask(QString _fPath, int _mode, bool compress, QString _option = ""  );
     void onRecv();
