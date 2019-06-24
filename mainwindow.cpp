@@ -72,6 +72,7 @@ void MainWindow::makeConnections(){
     connect(sw              , &SocWorker :: resultReady  , this , &MainWindow :: handleResults      );
     connect(this            , &MainWindow:: askTask      , sw   , &SocWorker  :: onAskTask          );
     connect(ui->label_paint , &PaintLabel:: roiSelect    , this , &MainWindow :: on_RoiSelect       );
+    connect(ui->label_paint , &PaintLabel:: roiRelesed   , this , &MainWindow :: on_RoiRelese       );
 
 }
 
@@ -206,6 +207,7 @@ void PaintLabel::mousePressEvent ( QMouseEvent* e )
 
     }else if(e->button() == Qt::RightButton){
         points.clear();
+        emit roiRelesed();
     }
 
     update();
@@ -239,7 +241,7 @@ void MainWindow::on_openInImage_triggered()
 
 
 //    current_path = path_dial(this);
-    current_path = "/home/hyeok/Pictures/Images/Pet_PNG/Pet_PNG(512x512)/cat06_512.png";
+    current_path = "/home/hyeok/Downloads/test.jpg";
     QImage* tempImg = img_path(current_path);
 
     imgWidth    = tempImg->width() ;
@@ -333,12 +335,6 @@ void MainWindow::on_btn_hist_clicked()
                   sizeOption + "|" + is_compressing );
 }
 
-void MainWindow::on_btn_homography_clicked()
-{
-
-    emit askTask( current_path,  9,is_compressing ,
-                  sizeOption + "|" + is_compressing );
-}
 
 void MainWindow::on_btn_emboss_clicked()
 {
@@ -346,10 +342,37 @@ void MainWindow::on_btn_emboss_clicked()
                   sizeOption + "|" + is_compressing );
 }
 
+void MainWindow::on_btn_homography_clicked()
+{
+
+    is_pointing = true;
+    rois.clear();
+
+}
+
+
 
 void MainWindow::on_RoiSelect(QVector<QPoint> _points){
-    qDebug() << "points : " << _points;
+
+    rois.push_back(_points);
+
+    if( rois.size() > 1){
+       QString points = qs_rois(rois);
+
+       emit askTask( current_path,  9,is_compressing ,
+                     sizeOption + "|" + is_compressing + "|" + "0"  + points );
+       is_pointing = false;
+
+    }
+
 }
+
+void MainWindow::on_RoiRelese(){
+
+    rois.clear();
+    is_pointing = false;
+}
+
 
 void MainWindow::on_btn_disconnect_clicked()
 {

@@ -509,4 +509,30 @@ inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _o
 
 }
 
+
+inline QString qs_rois(QVector<QVector<QPoint>> _rois){
+    QString str  = "|";
+    QString temp = "";
+
+    for(QVector<QPoint> roi : _rois){
+        for(QPoint p : roi){
+            temp.sprintf("%d-", p.x());
+            str += temp;
+        }
+    }
+
+    for(QVector<QPoint> roi : _rois){
+        for(QPoint p : roi){
+            temp.sprintf("%d-", p.y());
+            str += temp;
+        }
+    }
+
+    str + "|";
+
+    return str;
+
+}
+
+
 #endif // IMGHANDLER_STT_H

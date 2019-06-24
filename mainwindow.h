@@ -68,14 +68,18 @@ private slots:
 
     void on_btn_disconnect_clicked();
 
+    void on_RoiRelese();
+
 private:
     Ui::MainWindow *ui;
+    QString current_path;
     QThread socThread;
     QByteArray inImg;
     SocWorker* sw;
-    QString current_path;
-
+    bool is_pointing = false;
     bool is_compressing = false;
+
+    QVector<QVector<QPoint>> rois;
 };
 
 
@@ -129,6 +133,7 @@ public:
 
 signals:
     void roiSelect(QVector<QPoint> _points);
+    void roiRelesed();
 
 private:
 

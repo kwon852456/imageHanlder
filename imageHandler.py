@@ -486,42 +486,183 @@ def histoImage():
     sendImage()
 
 
+# def homography():
+#     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+#
+#     ## 출력영상 크기 결정 ##
+#     outH = inH;
+#     outW = inW;
+#
+#
+#
+#     outImage = np.zeros((3, outH, outW), dtype = np.uint8)
+#     inImage  = np.reshape(inImage , ((3, inH, inW)))
+#
+#
+#     k = Calcu_k()
+#
+#     for rgb in range(3):
+#         for i in range(outH):
+#             for j in range(outW):
+#
+#                 w      = k[0] * j + k[1] * i + k[2]
+#                 homo_x = k[3] * j + k[4] * i + k[5]
+#                 homo_y = k[6] * j + k[7] * i + k[8]
+#
+#
+#                 real_x = homo_x / w
+#                 real_y = homo_y / w
+#
+#                 if(0 <= real_y <= 255 and 0 <= real_x <= 255):
+#                     outImage[rgb][i + 150][j + 150] = inImage[rgb][int(real_y)][ int(real_x)]
+#
+#
+#     sendImage()
+
+def projection_matrix(x, _x, y, _y):
+    a = []
+    for i in range(8):
+        a.append([0] * 8)
+
+    b = [0] * 8
+
+    a[0][0] = x[0];
+    a[0][1] = y[0];
+    a[0][2] = 1.0;
+    a[0][6] = -1 * _x[0] * x[0];
+    a[0][7] = -1 * _x[0] * y[0];
+
+    a[1][0] = x[1];
+    a[1][1] = y[1];
+    a[1][2] = 1.0;
+    a[1][6] = -1 * _x[1] * x[1];
+    a[1][7] = -1 * _x[1] * y[1];
+
+    a[2][0] = x[2];
+    a[2][1] = y[2];
+    a[2][2] = 1.0;
+    a[2][6] = -1 * _x[2] * x[2];
+    a[2][7] = -1 * _x[2] * y[2];
+
+    a[3][0] = x[3];
+    a[3][1] = y[3];
+    a[3][2] = 1.0;
+    a[3][6] = -1 * _x[3] * x[3];
+    a[3][7] = -1 * _x[3] * y[3];
+
+    a[4][3] = x[0];
+    a[4][4] = y[0];
+    a[4][5] = 1.0;
+    a[4][6] = -1 * x[0] * _y[0];
+    a[4][7] = -1 * y[0] * _y[0];
+
+    a[5][3] = x[1];
+    a[5][4] = y[1];
+    a[5][5] = 1.0;
+    a[5][6] = -1 * x[1] * _y[1];
+    a[5][7] = -1 * y[1] * _y[1];
+
+    a[6][3] = x[2];
+    a[6][4] = y[2];
+    a[6][5] = 1.0;
+    a[6][6] = -1 * x[2] * _y[2];
+    a[6][7] = -1 * y[2] * _y[2];
+
+    a[7][3] = x[3];
+    a[7][4] = y[3];
+    a[7][5] = 1.0;
+    a[7][6] = -1 * x[3] * _y[3];
+    a[7][7] = -1 * y[3] * _y[3];
+
+    b[0] = _x[0];
+    b[1] = _x[1];
+    b[2] = _x[2];
+    b[3] = _x[3];
+    b[4] = _y[0];
+    b[5] = _y[1];
+    b[6] = _y[2];
+    b[7] = _y[3];
+
+    a_inv = np.linalg.pinv(a)
+
+    a_inv = np.array(a_inv, dtype = np.double).reshape((8,8))
+    b = np.array(b, dtype = np.double).reshape((8,1))
+
+    c = a_inv.dot(b)
+
+    print(c)
+
+    projection = [ [0] * 3  for _ in range(3) ]
+
+
+
+    projection[0][1] = c[1];
+    projection[0][0] = c[0];
+    projection[0][2] = c[2];
+
+    projection[1][0] = c[3];
+    projection[1][1] = c[4];
+    projection[1][2] = c[5];
+
+    projection[2][0] = c[6];
+    projection[2][1] = c[7];
+    projection[2][2] = 1.0;
+
+    return projection
+
 def homography():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global R, G, V, H, S, V, sx , ex, sy, ey
 
-    ## 출력영상 크기 결정 ##
-    outH = inH;
-    outW = inW;
+    outH = inH
+    outW = inW
+
+    inImage = np.reshape(inImage, (3, inH, inW))
+    outImage   = malloc3d(outH, outW )
+
+    print(sx, ex, sy, ey)
+    print(outImage.shape)
+
+    # sx = [   227,   309, 360, 398]
+    # sy = [   118,   512,  58, 512]
 
 
+    # sx = [   0,   0, 512, 512]
+    # sy = [   0, 512,   0, 512]
+    #
+    #
+    ex = np.array(ex)
+    ey = np.array(ey)
 
-    outImage = np.zeros((3, outH, outW), dtype = np.uint8)
-    inImage  = np.reshape(inImage , ((3, inH, inW)))
+
+    projection = projection_matrix( ex, sx, ey, sy)
+    projection = np.array(projection)
 
 
-    k = Calcu_k()
+    p = projection
 
     for rgb in range(3):
-        for i in range(outH):
-            for j in range(outW):
+        for j in range( ey.min(), ey.max() ):
+            for i in range(ex.min(), ex.max()):
 
-                w      = k[0] * j + k[1] * i + k[2]
-                homo_x = k[3] * j + k[4] * i + k[5]
-                homo_y = k[6] * j + k[7] * i + k[8]
+                w = p[2][0] * i + p[2][1] * j + p[2][2];
 
+                real_x = int((p[0][0] * i + p[0][1] * j + p[0][2]) / w)
+                real_y = int((p[1][0] * i + p[1][1] * j + p[1][2]) / w)
 
-                real_x = homo_x / w
-                real_y = homo_y / w
+                if 0 <= real_x <= 511 and 0 <= real_y <= 511:
+                    outImage[rgb][j][i] = inImage[rgb][real_y][real_x]
 
-                if(0 <= real_y <= 255 and 0 <= real_x <= 255):
-                    outImage[rgb][i + 150][j + 150] = inImage[rgb][int(real_y)][ int(real_x)]
 
 
     sendImage()
 
+
+
+
 def valueConvImage(mask):
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
-    global R, G, V, H, S, V, sx, sy, ex, ey
+    global R, G, V, H, S, V
 
     ## 출력영상 크기 결정 ##
     outH = inH;
@@ -575,10 +716,27 @@ def recvall(sock, count):
     return buf
 
 
+def loadRois(POINTS):
+    global sx, ex, sy, ey
+
+    p = POINTS.split("-")
+    p = list(filter(lambda x: x != "", p))
+    p = list(map(int, p))
+
+    sx = [ p[0] ,p[1] ,p[2]  ,p[3]  ]
+    ex = [ p[4] ,p[5] ,p[6]  ,p[7]  ]
+    sy = [ p[8] ,p[9] ,p[10] ,p[11] ]
+    ey = [ p[12],p[13],p[14] ,p[15] ]
+
+
+
+
 
 def recvAndLoad():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global R, G, V, H, S, V, sx, ex, sy, ey
 
+    sx = ex = sy = ey = 0
     i_totLength = b_totData = b_meta = list_meta = 0
 
     # 전체 데이터 크기 읽기 4바이트
@@ -606,8 +764,11 @@ def recvAndLoad():
     COMPRESS    = OPTION[2]
 
 
-    VALUE       = int( OPTION[3] ) if OPTION[3] != '' else OPTION[3]
+    VALUE       = int( OPTION[3] ) if OPTION[3].isdigit() else OPTION[3]
 
+    POINTS      = OPTION[4]
+    if POINTS != '':
+        loadRois(POINTS)
 
 
     # 나머지는 이미지 데이터
