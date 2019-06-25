@@ -240,7 +240,7 @@ void MainWindow::on_openInImage_triggered()
 
 
 //    current_path = path_dial(this);
-    current_path = "C:/Users/user/Downloads/test.jpg";
+    current_path = "/home/hyeok/Downloads/test.jpg";
     QImage* tempImg = img_path(current_path);
 
     imgWidth    = tempImg->width() ;
@@ -323,8 +323,8 @@ void MainWindow::on_btn_zoomOut_clicked()
 
 void MainWindow::on_btn_zoomIn_clicked()
 {
-    emit askTask( current_path,  7,is_compressing ,
-                  sizeOption + "|" + is_compressing );
+    is_zooming = true;
+    rois.clear();
 }
 
 
@@ -343,24 +343,30 @@ void MainWindow::on_btn_emboss_clicked()
 
 void MainWindow::on_btn_homography_clicked()
 {
-
-    is_pointing = true;
+    is_homoing = true;
     rois.clear();
-
 }
-
-
 
 void MainWindow::on_RoiSelect(QVector<QPoint> _points){
 
     rois.push_back(_points);
 
-    if( rois.size() > 1){
+    if(rois.size() >0 && is_zooming){
+
+        QString points = qs_rois(rois);
+
+        emit askTask( current_path,  7,is_compressing ,
+                      sizeOption + "|" + is_compressing + "|" + "0" + "|Z" + points);
+        is_zooming = false;
+
+    }
+
+    if( rois.size() > 1 && is_homoing){
        QString points = qs_rois(rois);
 
        emit askTask( current_path,  9,is_compressing ,
-                     sizeOption + "|" + is_compressing + "|" + "0"  + points );
-       is_pointing = false;
+                     sizeOption + "|" + is_compressing + "|" + "0"  + "|" + points );
+       is_homoing = false;
 
     }
 
@@ -369,11 +375,28 @@ void MainWindow::on_RoiSelect(QVector<QPoint> _points){
 void MainWindow::on_RoiRelese(){
 
     rois.clear();
-    is_pointing = false;
+    is_homoing = false;
+    is_zooming = false;
+
 }
 
 
 void MainWindow::on_btn_disconnect_clicked()
 {
     emit askDisCon();
+}
+
+void MainWindow::on_btn_Perspectiv_clicked()
+{
+    QString rot;
+    QString trans;
+    QString scale;
+
+    rot   += ui->edit_rotX->text() + "-" + ui->edit_rotY->text() + "-" + ui->edit_rotZ->text() + "-";
+    trans += ui->edit_moveX->text() + "-" + ui->edit_moveY->text() + "-" + ui->edit_moveZ->text() + "-";
+    scale += ui->edit_scaleX->text() + "-" + ui->edit_scaleY->text();
+
+    emit askTask( current_path,  11,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + "0"  + "|" + "P" + rot + trans + scale + "|" );
+
 }

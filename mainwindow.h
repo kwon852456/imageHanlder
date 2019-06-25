@@ -70,13 +70,16 @@ private slots:
 
     void on_RoiRelese();
 
+    void on_btn_Perspectiv_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString current_path;
     QThread socThread;
     QByteArray inImg;
     SocWorker* sw;
-    bool is_pointing = false;
+    bool is_homoing = false;
+    bool is_zooming = false;
     bool is_compressing = false;
 
     QVector<QVector<QPoint>> rois;

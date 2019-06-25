@@ -98,9 +98,10 @@ def rotateCalc(x, y, theta = 90, reverse = False):
     return xNew, yNew
 
 
-def Calcu_k( rotate_xyz = (30, 0, 0), size_xy = (256, 256), scale_xy = (1, 1), trans_xyz = ( 0.2 , 0, 0 )):
+def Calcu_k():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
     global size_x, size_y
+    global rotate_xyz, trans_xyz, scale_xy, size_xy
 
 
     k = [0] * 9
@@ -236,6 +237,95 @@ def Calcu_k( rotate_xyz = (30, 0, 0), size_xy = (256, 256), scale_xy = (1, 1), t
 
     print("Calcu_k END..")
     return k
+
+
+def projection_matrix(x, _x, y, _y):
+    a = []
+    for i in range(8):
+        a.append([0] * 8)
+
+    b = [0] * 8
+
+    a[0][0] = x[0];
+    a[0][1] = y[0];
+    a[0][2] = 1.0;
+    a[0][6] = -1 * _x[0] * x[0];
+    a[0][7] = -1 * _x[0] * y[0];
+
+    a[1][0] = x[1];
+    a[1][1] = y[1];
+    a[1][2] = 1.0;
+    a[1][6] = -1 * _x[1] * x[1];
+    a[1][7] = -1 * _x[1] * y[1];
+
+    a[2][0] = x[2];
+    a[2][1] = y[2];
+    a[2][2] = 1.0;
+    a[2][6] = -1 * _x[2] * x[2];
+    a[2][7] = -1 * _x[2] * y[2];
+
+    a[3][0] = x[3];
+    a[3][1] = y[3];
+    a[3][2] = 1.0;
+    a[3][6] = -1 * _x[3] * x[3];
+    a[3][7] = -1 * _x[3] * y[3];
+
+    a[4][3] = x[0];
+    a[4][4] = y[0];
+    a[4][5] = 1.0;
+    a[4][6] = -1 * x[0] * _y[0];
+    a[4][7] = -1 * y[0] * _y[0];
+
+    a[5][3] = x[1];
+    a[5][4] = y[1];
+    a[5][5] = 1.0;
+    a[5][6] = -1 * x[1] * _y[1];
+    a[5][7] = -1 * y[1] * _y[1];
+
+    a[6][3] = x[2];
+    a[6][4] = y[2];
+    a[6][5] = 1.0;
+    a[6][6] = -1 * x[2] * _y[2];
+    a[6][7] = -1 * y[2] * _y[2];
+
+    a[7][3] = x[3];
+    a[7][4] = y[3];
+    a[7][5] = 1.0;
+    a[7][6] = -1 * x[3] * _y[3];
+    a[7][7] = -1 * y[3] * _y[3];
+
+    b[0] = _x[0];
+    b[1] = _x[1];
+    b[2] = _x[2];
+    b[3] = _x[3];
+    b[4] = _y[0];
+    b[5] = _y[1];
+    b[6] = _y[2];
+    b[7] = _y[3];
+
+    a_inv = np.linalg.pinv(a)
+
+    a_inv = np.array(a_inv, dtype = np.double).reshape((8,8))
+    b = np.array(b, dtype = np.double).reshape((8,1))
+
+    c = a_inv.dot(b)
+
+    projection = [ [0] * 3  for _ in range(3) ]
+
+    projection[0][1] = c[1];
+    projection[0][0] = c[0];
+    projection[0][2] = c[2];
+
+    projection[1][0] = c[3];
+    projection[1][1] = c[4];
+    projection[1][2] = c[5];
+
+    projection[2][0] = c[6];
+    projection[2][1] = c[7];
+    projection[2][2] = 1.0;
+
+    return projection
+
 
 
 #########################################
@@ -417,13 +507,50 @@ def zoomout():
 
 def zoomin():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global sx, sy
 
-    VALUE = 2
+    print(sx, sy)
+    sx = np.array(sx)
+    sy = np.array(sy)
 
-    outH = inH ;
-    outW = inW ;
+
+
+    xMax = sx.max()
+    xMin = sx.min()
+    yMax = sy.max()
+    yMin = sy.min()
+
+    xdiff = xMax - xMin
+    ydiff = yMax - yMin
+
+
+    xScale = 512 / xdiff
+    yScale = 512 / ydiff
+
+    scale  = xScale if xScale < yScale else yScale
+
+    xMaxs = sx.max() * scale
+    xMins = sx.min() * scale
+    yMaxs = sy.max() * scale
+    yMins = sy.min() * scale
+
+
+    xdisToCenter = (512 - xMin + xdiff * 0.5) * scale
+    ydisToCenter = (512 - yMin + ydiff * 0.5) * scale
+
+    outH  = inH ;
+    outW  = inW ;
+    tempH = inH * scale
+    tempW = inW * scale
+
+
+
+    print(xdiff)
+    print(ydiff)
+
 
     outImage = np.zeros( (3 ,inH, inW), dtype = np.uint8 )
+    tempImage = np.zeros( (3 ,int(tempH), int(tempW)), dtype = np.uint8 )
     inImage  = np.reshape( inImage , ((3 ,inH, inW)) )
 
     rH, rW, iH, iW = [0] * 4  # 실수 위치 및 정수 위치
@@ -431,11 +558,11 @@ def zoomin():
     C1, C2, C3, C4 = [0] * 4  # 결정할 위치(n)의 상하 좌우 픽셀
 
     for rgb in range(3):
-        for i in range(outH):
-            for k in range(outH):
+        for i in range(int(tempH)):
+            for k in range(int(tempW)):
 
-                rH = i / VALUE
-                rW = k / VALUE
+                rH = i / scale
+                rW = k / scale
                 iH = int(rH)
                 iW = int(rW)
 
@@ -450,7 +577,27 @@ def zoomin():
                     C4 = inImage[rgb][iH + 1][iW]
 
                     newValue = C1 * (1 - y) * (1 - x) + C2 * (1 - y) * x + C3 * y * x + C4 * (1 - x) * y
-                    outImage[rgb][i][k] = int(newValue)
+                    tempImage[rgb][i][k] = int(newValue)
+
+
+    print(tempH)
+    print(tempW)
+    print(tempImage.shape)
+    print(outH)
+    print(outW)
+    print(xdisToCenter)
+    print(ydisToCenter)
+    print(xMaxs)
+    print(xMin)
+
+    for rgb in range(3):
+        for i in range(outH):
+            for k in range(outW):
+                if 0 <= i + yMins <= outH * scale -1 and 0 <= k + xMins <= outW * scale - 1:
+                    outImage[rgb][i][k] = tempImage[rgb][ int(i + yMins)  ][ int(k + xMins ) ]
+
+
+
 
     sendImage()
 
@@ -494,125 +641,52 @@ def histoImage():
     sendImage()
 
 
-# def homography():
-#     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
-#
-#     ## 출력영상 크기 결정 ##
-#     outH = inH;
-#     outW = inW;
-#
-#
-#
-#     outImage = np.zeros((3, outH, outW), dtype = np.uint8)
-#     inImage  = np.reshape(inImage , ((3, inH, inW)))
-#
-#
-#     k = Calcu_k()
-#
-#     for rgb in range(3):
-#         for i in range(outH):
-#             for j in range(outW):
-#
-#                 w      = k[0] * j + k[1] * i + k[2]
-#                 homo_x = k[3] * j + k[4] * i + k[5]
-#                 homo_y = k[6] * j + k[7] * i + k[8]
-#
-#
-#                 real_x = homo_x / w
-#                 real_y = homo_y / w
-#
-#                 if(0 <= real_y <= 255 and 0 <= real_x <= 255):
-#                     outImage[rgb][i + 150][j + 150] = inImage[rgb][int(real_y)][ int(real_x)]
-#
-#
-#     sendImage()
+def perspectiveTrasform():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global scale_xy, trans_xyz
 
-def projection_matrix(x, _x, y, _y):
-    a = []
-    for i in range(8):
-        a.append([0] * 8)
+    ## 출력영상 크기 결정 ##
+    outH = inH
+    outW = inW
 
-    b = [0] * 8
+    outImage = np.zeros((3, outH, outW), dtype = np.uint8)
+    inImage  = np.reshape(inImage , ((3, inH, inW)))
 
-    a[0][0] = x[0];
-    a[0][1] = y[0];
-    a[0][2] = 1.0;
-    a[0][6] = -1 * _x[0] * x[0];
-    a[0][7] = -1 * _x[0] * y[0];
 
-    a[1][0] = x[1];
-    a[1][1] = y[1];
-    a[1][2] = 1.0;
-    a[1][6] = -1 * _x[1] * x[1];
-    a[1][7] = -1 * _x[1] * y[1];
+    sCx = inW // 2
+    sCy = inH // 2
 
-    a[2][0] = x[2];
-    a[2][1] = y[2];
-    a[2][2] = 1.0;
-    a[2][6] = -1 * _x[2] * x[2];
-    a[2][7] = -1 * _x[2] * y[2];
+    eCx = inH * scale_xy[0] // 2
+    eCy = inW * scale_xy[1] // 2
 
-    a[3][0] = x[3];
-    a[3][1] = y[3];
-    a[3][2] = 1.0;
-    a[3][6] = -1 * _x[3] * x[3];
-    a[3][7] = -1 * _x[3] * y[3];
+    offsetx = int(sCx - eCx)
+    offsety = int(sCy - eCy)
 
-    a[4][3] = x[0];
-    a[4][4] = y[0];
-    a[4][5] = 1.0;
-    a[4][6] = -1 * x[0] * _y[0];
-    a[4][7] = -1 * y[0] * _y[0];
 
-    a[5][3] = x[1];
-    a[5][4] = y[1];
-    a[5][5] = 1.0;
-    a[5][6] = -1 * x[1] * _y[1];
-    a[5][7] = -1 * y[1] * _y[1];
+    print(outImage.shape)
+    print(inImage.shape)
 
-    a[6][3] = x[2];
-    a[6][4] = y[2];
-    a[6][5] = 1.0;
-    a[6][6] = -1 * x[2] * _y[2];
-    a[6][7] = -1 * y[2] * _y[2];
 
-    a[7][3] = x[3];
-    a[7][4] = y[3];
-    a[7][5] = 1.0;
-    a[7][6] = -1 * x[3] * _y[3];
-    a[7][7] = -1 * y[3] * _y[3];
+    k = Calcu_k()
 
-    b[0] = _x[0];
-    b[1] = _x[1];
-    b[2] = _x[2];
-    b[3] = _x[3];
-    b[4] = _y[0];
-    b[5] = _y[1];
-    b[6] = _y[2];
-    b[7] = _y[3];
+    for rgb in range(3):
+        for i in range(outH):
+            for j in range(outW):
 
-    a_inv = np.linalg.pinv(a)
+                w      = k[0] * j + k[1] * i + k[2]
+                homo_x = k[3] * j + k[4] * i + k[5]
+                homo_y = k[6] * j + k[7] * i + k[8]
 
-    a_inv = np.array(a_inv, dtype = np.double).reshape((8,8))
-    b = np.array(b, dtype = np.double).reshape((8,1))
 
-    c = a_inv.dot(b)
+                real_x = homo_x / w
+                real_y = homo_y / w
 
-    projection = [ [0] * 3  for _ in range(3) ]
+                if(0 <= real_y <= 511 and 0 <= real_x <= 511 ) and ( 0 <= i + offsetx <= 511 and 0 <= j + offsetx <= 511 ):
+                    outImage[rgb][i + offsetx ][j + offsety ] = inImage[rgb][int(real_y)][ int(real_x)]
 
-    projection[0][1] = c[1];
-    projection[0][0] = c[0];
-    projection[0][2] = c[2];
 
-    projection[1][0] = c[3];
-    projection[1][1] = c[4];
-    projection[1][2] = c[5];
+    sendImage()
 
-    projection[2][0] = c[6];
-    projection[2][1] = c[7];
-    projection[2][2] = 1.0;
-
-    return projection
 
 def homography():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
@@ -726,6 +800,22 @@ def loadRois(POINTS):
     ey = [ p[12],p[13],p[14] ,p[15] ]
 
 
+def loadPerspectiveValues(PerspectiveValues):
+    global rotate_xyz, trans_xyz, scale_xy, size_xy
+
+    values = list(map(float, PerspectiveValues.split("-")))
+
+    rotate_xyz = [ values[0], values[1] ,values[2]  ]
+    trans_xyz  = [ values[3], values[4] ,values[5]  ]
+    scale_xy   = [ values[6], values[7]             ]
+    size_xy    = [ 512, 512                         ]
+
+def loadRoi(zoomPoints):
+    global sx, sy
+    points = list(map( lambda x: int(x) if x.isdigit() else '', zoomPoints.split("-")))
+    sx = [ points[0], points[1], points[2], points[3] ]
+    sy = [ points[4], points[5], points[6], points[7] ]
+
 
 
 
@@ -764,8 +854,17 @@ def recvAndLoad():
     VALUE       = int( OPTION[3] ) if OPTION[3].isdigit() else OPTION[3]
 
     POINTS      = OPTION[4]
+
+    print(POINTS)
+
     if POINTS != '':
-        loadRois(POINTS)
+        if POINTS[0] == "P":
+            loadPerspectiveValues(POINTS[1 : ])
+        elif POINTS[0] == "Z":
+            loadRoi(POINTS[ 1 : ])
+
+        else:
+            loadRois(POINTS)
 
 
     # 나머지는 이미지 데이터
@@ -865,6 +964,10 @@ if __name__ == '__main__':
 
             elif mode == 10:
                 valueConvImage(EMBOSS_MASK)
+
+            elif mode == 11:
+                perspectiveTrasform()
+
 
         except UnicodeDecodeError as e:
             print(traceback.format_exc())
