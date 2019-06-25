@@ -161,7 +161,7 @@ inline QByteArray head_enc(QString _fPath, int _mode, QString _option, int imgSi
 
     #ifdef Q_OS_LINUX
     QByteArray metaData = ba_qs( "C:" +_fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
-    #elif
+    #else
     QByteArray metaData = ba_qs( _fPath + ":" + QString::number(_mode) + ":" + _option + ":" , 200);
     #endif
 

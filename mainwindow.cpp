@@ -112,7 +112,6 @@ SocWorker::SocWorker(){
     connect(sendSock,  &QTcpSocket::connected     , this, &SocWorker::onServerConnected);
     connect(sendSock,  &QTcpSocket::readyRead     , this, &SocWorker::onRecv           );
 
-
 }
 
 SocWorker::~SocWorker(){
@@ -241,7 +240,7 @@ void MainWindow::on_openInImage_triggered()
 
 
 //    current_path = path_dial(this);
-    current_path = "/home/hyeok/Downloads/test.jpg";
+    current_path = "C:/Users/user/Downloads/test.jpg";
     QImage* tempImg = img_path(current_path);
 
     imgWidth    = tempImg->width() ;

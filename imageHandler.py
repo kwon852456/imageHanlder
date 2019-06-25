@@ -12,6 +12,8 @@ import socket
 import time
 import math
 import io
+import time
+import cv2
 
 
 
@@ -247,7 +249,6 @@ def loadImage(width, height):
     inH   = int(height)
     photo = Image.frombytes('RGB',( inH, inW ), b_img, 'raw' )
 
-
     inImage = malloc( inH, inW  )
 
     R, G, B = photo.split()
@@ -320,25 +321,17 @@ def binImage():
 
     inImage   = np.reshape(inImage  , ( 3, inW, inH    ))
     outImage  = np.reshape(outImage , ( 3, inW, inH    ))
-
-    tmpImage  = np.zeros((outH, outW))
+    tmpImage  = np.zeros((outH, outW),dtype = np.int)
 
     ## 알고리즘 ##
 
+    tmpImage += inImage[0]
+    tmpImage += inImage[1]
+    tmpImage += inImage[2]
+    tmpImage //= 3
 
-    for rgb in range(3):
-        for i in range(outH):
-            for k in range(outW):
-                tmpImage[i][k] += inImage[rgb][i][k] // 3
-
-    tmpImage = np.where(tmpImage > VALUE, 255,  0)
-
-
-    for rgb in range(3):
-        for i in range(outH):
-            for k in range(outW):
-                outImage[rgb][i][k] = tmpImage[i][k]
-
+    outImage[2] = np.where(tmpImage > VALUE, 255,  0)
+    outImage[0] = outImage[1] = outImage[2]
 
     sendImage()
 
@@ -377,33 +370,48 @@ def paraImage():
 
     sendImage()
 
-
 def zoomout():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
 
-    VALUE = 3;
+    VALUE = 2;
 
-    outH = inH
-    outW = inW
+    outH = inH // VALUE
+    outW = inW // VALUE
 
-    Cx = inW // 4
-    Cy = inH // 4
+    print(outImage.shape)
+    print(inImage.shape)
 
+    inImage  = np.reshape(inImage, ( 3, inH, inW )         )
+    outImage = np.zeros  ( (3 ,inH, inW), dtype = np.uint8 )
 
-    inImage  = np.reshape(inImage, ( 3, inH, inW ))
-    outImage = np.zeros( (3 ,inH, inW), dtype = np.uint8 )
+    sCx = inW // 2
+    sCy = inH // 2
+
+    eCx = outH // 2
+    eCy = outH // 2
+
+    offsetx = sCx - eCx
+    offsety = sCy - eCy
+
+    print(outImage.shape)
 
     for rgb in range(3):
-        for i in range( int(inH // VALUE) ):
-            for k in range( int(inW // VALUE) ):
+        for i in range( outH ):
+            for k in range( outW ):
+                outImage[rgb][ i + offsetx ][ k + offsety ] += inImage[rgb][ int(i * VALUE)  ][ int(k * VALUE)  ]
 
-                xFrom = VALUE *  i
-                xTo   = VALUE * (i + 1)
-                yFrom = VALUE *  k
-                yTo   = VALUE * (k + 1)
-
-                outImage[rgb][i + Cy][k + Cx] = inImage[rgb: rgb + 1 , xFrom :  xTo , yFrom : yTo ].mean()
-
+    #
+    # for rgb in range(3):
+    #     for i in range( int(inH // VALUE) ):
+    #         for k in range( int(inW // VALUE) ):
+    #
+    #             xFrom = VALUE *  i
+    #             xTo   = VALUE * (i + 1)
+    #             yFrom = VALUE *  k
+    #             yTo   = VALUE * (k + 1)
+    #
+    #             outImage[rgb][i + Cy][k + Cx] = inImage[rgb: rgb + 1 , xFrom :  xTo , yFrom : yTo ].mean()
+    #
     sendImage()
 
 
@@ -416,7 +424,7 @@ def zoomin():
     outW = inW ;
 
     outImage = np.zeros( (3 ,inH, inW), dtype = np.uint8 )
-    inImage  = np.reshape( inImage , ((3 ,inH, inW)))
+    inImage  = np.reshape( inImage , ((3 ,inH, inW)) )
 
     rH, rW, iH, iW = [0] * 4  # 실수 위치 및 정수 위치
     x, y = [0] * 2  # 실수와 정수의 차이값
@@ -590,11 +598,7 @@ def projection_matrix(x, _x, y, _y):
 
     c = a_inv.dot(b)
 
-    print(c)
-
     projection = [ [0] * 3  for _ in range(3) ]
-
-
 
     projection[0][1] = c[1];
     projection[0][0] = c[0];
@@ -623,14 +627,6 @@ def homography():
     print(sx, ex, sy, ey)
     print(outImage.shape)
 
-    # sx = [   227,   309, 360, 398]
-    # sy = [   118,   512,  58, 512]
-
-
-    # sx = [   0,   0, 512, 512]
-    # sy = [   0, 512,   0, 512]
-    #
-    #
     ex = np.array(ex)
     ey = np.array(ey)
 
@@ -640,6 +636,9 @@ def homography():
 
 
     p = projection
+
+
+    outImage = inImage
 
     for rgb in range(3):
         for j in range( ey.min(), ey.max() ):
@@ -652,8 +651,6 @@ def homography():
 
                 if 0 <= real_x <= 511 and 0 <= real_y <= 511:
                     outImage[rgb][j][i] = inImage[rgb][real_y][real_x]
-
-
 
     sendImage()
 
@@ -789,11 +786,14 @@ def recvAndLoad():
     return int(MODE)
 
 def sendImage():
-    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, START, inImage, outImage, b_img, inH, inW, outW, outH
 
-    R = Image.fromarray(outImage[0].reshape((outW, outH)))
-    G = Image.fromarray(outImage[1].reshape((outW, outH)))
-    B = Image.fromarray(outImage[2].reshape((outW, outH)))
+    FIXED_OUTH = 512
+    FIXED_OUTW = 512
+
+    R = Image.fromarray(outImage[0].reshape((FIXED_OUTH, FIXED_OUTW)))
+    G = Image.fromarray(outImage[1].reshape((FIXED_OUTH, FIXED_OUTW)))
+    B = Image.fromarray(outImage[2].reshape((FIXED_OUTH, FIXED_OUTW)))
 
 
     b_outImg = Image.merge("RGB", (R, G, B)).tobytes()
@@ -802,10 +802,10 @@ def sendImage():
 
     print("bytes To Send : ", length)
 
-
-
     conn.send(length.to_bytes(4, byteorder='little'))
     print(conn.send(b_outImg[:]))
+    print( "elapsed time : ", time.time() - START )
+
 
 
 
@@ -830,7 +830,8 @@ if __name__ == '__main__':
     while True:
         try:
 
-            mode = recvAndLoad()
+            mode  = recvAndLoad()
+            START = time.time()
 
             if mode == 0:
                 equalImage()
