@@ -1363,6 +1363,7 @@ p, li { white-space: pre-wrap; }
      <string>File</string>
     </property>
     <addaction name="openInImage"/>
+    <addaction name="actionsave_as"/>
    </widget>
    <widget class="QMenu" name="menuConfigure">
     <property name="title">
@@ -1388,6 +1389,11 @@ p, li { white-space: pre-wrap; }
   <action name="actionLoadImage">
    <property name="text">
     <string>LoadImage</string>
+   </property>
+  </action>
+  <action name="actionsave_as">
+   <property name="text">
+    <string>save as...</string>
    </property>
   </action>
  </widget>

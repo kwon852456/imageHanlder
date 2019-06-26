@@ -25,16 +25,19 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++14 warn_off
 
 SOURCES += \
+        dbdialog.cpp \
         main.cpp \
         mainwindow.cpp
 
 HEADERS += \
         ../KH_01/KH_02.hpp \
         KH_01.hpp \
+        dbdialog.h \
         imghandler_stt.h \
         mainwindow.h
 
 FORMS += \
+        dbdialog.ui \
         mainwindow.ui
 
 INCLUDEPATH += \

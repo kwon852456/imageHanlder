@@ -21,7 +21,8 @@
 #include <QMatrix>
 #include <QGenericMatrix>
 #include <QTimer>
-
+#include <QMdiSubWindow>
+#include <QBuffer>
 
 /////////////////////////////////////////
 ///////    static functions    //////////

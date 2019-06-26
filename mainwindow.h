@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "imghandler_stt.h"
+#include "dbdialog.h"
 
 
 namespace Ui {
@@ -25,6 +26,7 @@ public slots:
     void on_openInImage_triggered();
     void handleResults(const QByteArray result);
     void putStatus    (QString _status);
+    void onDbItemSelected(int idx);
 
 
 signals:
@@ -32,11 +34,14 @@ signals:
     void askDisCon();
     void askTask(QString _fPath, int _mode, bool compress, QString _option = "" );
     void presetChecked(bool checked);
+    void setdbList(QStringList list);
+    void saveTempImage(QString _path);
 
 private:
    int imgWidth  = -1;
    int imgHeight = -1;
    QString sizeOption  = "";
+   dbDialog* dbList;
 
 private slots:
     void on_btn_bright_clicked();
@@ -89,6 +94,8 @@ private slots:
 
     void on_actionLoadImage_triggered();
 
+    void on_actionsave_as_triggered();
+
 private:
     Ui::MainWindow *ui;
     QString current_path;
@@ -124,6 +131,7 @@ public slots:
     void disConnectServer();
     void onServerConnected();
     void onRecv();
+    void onSaveTempImage(QString _path);
 
 signals:
     void resultReady(const QByteArray result);

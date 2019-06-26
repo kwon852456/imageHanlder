@@ -22,8 +22,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     createThreads();
-    makeConnections();
+
+    dbList = new dbDialog(this);
     on_check_Log_clicked(false);
+    makeConnections();
 
 
     ///////////////////////////////////
@@ -31,6 +33,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ///////////////////////////////////
 
     on_btn_connect_clicked();
+
+
+
 
 
     //////// End Debug Routin ////////
@@ -65,15 +70,19 @@ void MainWindow::createThreads(){
 
 void MainWindow::makeConnections(){
 
-    connect(&socThread      , &QThread   :: finished      , sw   , &QObject    :: deleteLater        );
-    connect(this            , &MainWindow:: askCon        , sw   , &SocWorker  :: connectServer      );
-    connect(this            , &MainWindow:: askDisCon     , sw   , &SocWorker  :: disConnectServer   );
-    connect(this            , &MainWindow:: askTask       , sw   , &SocWorker  :: onAskTask          );
-    connect(this            , &MainWindow:: presetChecked , sw   , &SocWorker  :: onPresetChecked    );
-    connect(sw              , &SocWorker :: sendMsg       , this , &MainWindow :: putStatus          );
-    connect(sw              , &SocWorker :: resultReady   , this , &MainWindow :: handleResults      );
-    connect(ui->label_paint , &PaintLabel:: roiSelect     , this , &MainWindow :: on_RoiSelect       );
-    connect(ui->label_paint , &PaintLabel:: roiRelesed    , this , &MainWindow :: on_RoiRelese       );
+    connect(&socThread      , &QThread     :: finished        , sw     , &QObject    :: deleteLater        );
+    connect(this            , &MainWindow  :: askCon          , sw     , &SocWorker  :: connectServer      );
+    connect(this            , &MainWindow  :: askDisCon       , sw     , &SocWorker  :: disConnectServer   );
+    connect(this            , &MainWindow  :: askTask         , sw     , &SocWorker  :: onAskTask          );
+    connect(this            , &MainWindow  :: presetChecked   , sw     , &SocWorker  :: onPresetChecked    );
+    connect(sw              , &SocWorker   :: sendMsg         , this   , &MainWindow :: putStatus          );
+    connect(sw              , &SocWorker   :: resultReady     , this   , &MainWindow :: handleResults      );
+    connect(ui->label_paint , &PaintLabel  :: roiSelect       , this   , &MainWindow :: on_RoiSelect       );
+    connect(ui->label_paint , &PaintLabel  :: roiRelesed      , this   , &MainWindow :: on_RoiRelese       );
+    connect(ui->label_paint , &PaintLabel  :: roiRelesed      , this   , &MainWindow :: on_RoiRelese       );
+    connect(this            , &MainWindow  :: setdbList       , dbList , &dbDialog   :: onListRecv         );
+    connect(dbList          , &dbDialog    :: dbItemSelected  , this   , &MainWindow :: onDbItemSelected   );
+    connect(this            , &MainWindow  :: saveTempImage   , sw     , &SocWorker  :: onSaveTempImage    );
 
 }
 
@@ -92,13 +101,22 @@ void MainWindow::handleResults(QByteArray _recvImg ){
         QStringList dbDatas = QString::fromLocal8Bit(_recvImg).split("-");
         dbDatas.removeAt(0);
 
+        emit setdbList(dbDatas);
+        dbDatas.clear();
+        dbList->setModal(true);
+        dbList->show();
+
+
+    }else{
+
+        ui->label_img->clear();
+
+        lab_pix(pix_img(colImg_ba(&_recvImg, imgWidth, imgHeight)), ui->label_img);
+        qDebug() << "recv size : " << _recvImg.length();
+
     }
 
 
-    ui->label_img->clear();
-
-    lab_pix(pix_img(colImg_ba(&_recvImg, imgWidth, imgHeight)), ui->label_img);
-    qDebug() << "recv size : " << _recvImg.length();
 
 }
 
@@ -107,7 +125,6 @@ void MainWindow::putStatus(QString _text){
     ui->statusBar->showMessage(_text,10000);
 
 }
-
 
 
 
@@ -200,9 +217,9 @@ void SocWorker::onRecv(){
 
         emit resultReady( recvData );
 
-        if (is_presetSaving){
+//        if (is_presetSaving){
             tempData = recvData;
-        }
+//        }
 
         is_recvStart = false;
 
@@ -217,6 +234,20 @@ void SocWorker::onPresetChecked(bool checked){
     if(!checked){
         tempData.clear();
     }
+}
+
+void SocWorker::onSaveTempImage(QString _path){
+    QPixmap* pixmap = pix_img(img_ba(tempData));
+//    QByteArray bytes;
+//    QBuffer buffer(&bytes);
+//    buffer.open(QIODevice::WriteOnly);
+//    pixmap -> save(&buffer, "PNG");
+
+    QFile file(_path + "/" + "yourFile.png");
+    file.open(QIODevice::WriteOnly);
+    pixmap -> save(&file, "PNG");
+
+    delete pixmap;
 }
 
 
@@ -521,4 +552,17 @@ void MainWindow::on_actionLoadImage_triggered()
 {
     emit askTask( current_path,  16,is_compressing ,
                   sizeOption + "|" + is_compressing );
+}
+
+void MainWindow::onDbItemSelected(int idx){
+    emit askTask( current_path,  17,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + QString::number(idx) );
+    dbList->hide();
+}
+
+void MainWindow::on_actionsave_as_triggered()
+{
+
+    QString save_path = QFileDialog::getExistingDirectory(this, "save dir, ",QDir::homePath());
+    emit saveTempImage(save_path);
 }

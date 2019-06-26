@@ -372,7 +372,7 @@ def saveTempImage() :
 
 
 def saveMysql():
-    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, START, inImage, outImage, b_img, inH, inW, outW, outH, b_outImg
 
     con = pymysql.connect(host=IP_ADDR, user=USER_NAME, password=USER_PW,
                           db=DB_NAME, charset=CHAR_SET)
@@ -394,7 +394,7 @@ def saveMysql():
         pass
 
     fullname = FILE_PATH
-    binData = b_img
+    binData = b_outImg
     print("sizo of b_img : " , b_img)
 
     fname, extname = os.path.basename(fullname).split(".")
@@ -419,21 +419,28 @@ def saveMysql():
 
     print("업로드 OK -->" + fullname)
 
-    def selectRecord():
-        global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
-        selIndex = listbox.curselection()[0]
-        subWindow.destroy()
-        raw_id = queryList[selIndex][0]
-        sql = "SELECT raw_fname, raw_extname, raw_data FROM rawImage_TBL2 "
-        sql += "WHERE raw_id = " + str(raw_id)
-        cur.execute(sql)
-        fname, extname, binData = cur.fetchone()
+def selectRecord():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
 
-        fullPath = tempfile.gettempdir() + '/' + fname + "." + extname
-        with open(fullPath, 'wb') as wfp:
-            wfp.write(binData)
-        cur.close()
-        con.close()
+    con = pymysql.connect(host=IP_ADDR, user=USER_NAME, password=USER_PW,
+                          db=DB_NAME, charset=CHAR_SET)
+    cur = con.cursor()
+
+
+    raw_id = VALUE + 1
+    sql = "SELECT raw_fname, raw_extname, raw_data FROM rawImage_TBL "
+    sql += "WHERE raw_id = " + str(raw_id)
+
+    cur.execute(sql)
+    fname, extname, binData = cur.fetchone()
+
+    b_img = binData
+
+    loadImage(512, 512)
+    equalImage()
+
+    cur.close()
+    con.close()
 
 def loadMysql():
     global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
@@ -1183,7 +1190,7 @@ def recvAndLoad():
     return int(MODE)
 
 def sendImage():
-    global DRIVER_NAME, FILE_PATH, VALUE, LUT, START, inImage, outImage, b_img, inH, inW, outW, outH
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, START, inImage, outImage, b_img, inH, inW, outW, outH, b_outImg
 
     FIXED_OUTH = 512
     FIXED_OUTW = 512
@@ -1202,10 +1209,6 @@ def sendImage():
     conn.send(length.to_bytes(4, byteorder='little'))
     print(conn.send(b_outImg[:]))
     print( "elapsed time : ", time.time() - START )
-
-
-
-
 
 
 
@@ -1282,6 +1285,10 @@ if __name__ == '__main__':
 
             elif mode == 16:
                 loadMysql()
+
+            elif mode == 17:
+                selectRecord()
+
 
 
         except UnicodeDecodeError as e:
