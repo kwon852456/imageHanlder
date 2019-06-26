@@ -237,7 +237,7 @@ void SocWorker::onPresetChecked(bool checked){
 }
 
 void SocWorker::onSaveTempImage(QString _path){
-    QPixmap* pixmap = pix_img(img_ba(tempData));
+    QPixmap* pixmap = pix_img(colImg_ba(&tempData,512, 512));
 //    QByteArray bytes;
 //    QBuffer buffer(&bytes);
 //    buffer.open(QIODevice::WriteOnly);
