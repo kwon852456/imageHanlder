@@ -31,6 +31,7 @@ signals:
     void askCon(const QString _addr, const int _port);
     void askDisCon();
     void askTask(QString _fPath, int _mode, bool compress, QString _option = "" );
+    void presetChecked(bool checked);
 
 private:
    int imgWidth  = -1;
@@ -72,12 +73,29 @@ private slots:
 
     void on_btn_Perspectiv_clicked();
 
+    void on_btn_conv_clicked();
+
+    void on_radio_rgb_clicked();
+
+    void on_radio_hsv_clicked();
+
+    void on_cb_preset_clicked(bool checked);
+
+    void on_btn_nomalization_clicked();
+
+    void on_btn_end_in_clicked();
+
+    void on_actionSaveImage_triggered();
+
+    void on_actionLoadImage_triggered();
+
 private:
     Ui::MainWindow *ui;
     QString current_path;
     QThread socThread;
     QByteArray inImg;
     SocWorker* sw;
+    bool is_presetSaving = false;
     bool is_homoing = false;
     bool is_zooming = false;
     bool is_compressing = false;
@@ -100,10 +118,11 @@ public:
 
 
 public slots:
+    void onAskTask(QString _fPath, int _mode, bool compress, QString _option = ""  );
     void connectServer(const QString _addr, const int _port);
+    void onPresetChecked(bool checked);
     void disConnectServer();
     void onServerConnected();
-    void onAskTask(QString _fPath, int _mode, bool compress, QString _option = ""  );
     void onRecv();
 
 signals:
@@ -116,8 +135,10 @@ private:
     QString port;
     QTcpSocket* sendSock;
     QByteArray recvData;
+    QByteArray tempData;
     int targetLength = -1;
     bool is_recvStart = false;
+    bool is_presetSaving = false;
 };
 
 

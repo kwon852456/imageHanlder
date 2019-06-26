@@ -488,7 +488,7 @@ inline QByteArray encode_path(QString _path, int rank = 25){
     return sum;
 }
 
-inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _option = "None"){
+inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _option = "None", QByteArray _image = nullptr){
 
     QByteArray b_Img;
     QByteArray b_header;
@@ -499,8 +499,15 @@ inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _o
         b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
 
     }else{
+
         QImage* tempImg = img_path(_fPath);
-        b_Img    = QByteArray( reinterpret_cast<char*>(tempImg->bits()), tempImg->sizeInBytes() );
+
+        if(_image == nullptr){
+            b_Img    = QByteArray( reinterpret_cast<char*>(tempImg->bits()), tempImg->sizeInBytes() );
+        }else{
+            b_Img    = _image;
+        }
+
         b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
 
     }

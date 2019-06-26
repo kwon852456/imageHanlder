@@ -13,7 +13,8 @@ import time
 import math
 import io
 import time
-import cv2
+import tempfile
+import pymysql
 
 
 
@@ -29,6 +30,13 @@ H  = 0 ; S   = 1 ; V   = 2
 
 RECV_TCP_IP = 'localhost'
 RECV_TCP_PORT = 1234
+
+
+IP_ADDR   = '192.168.56.110'
+USER_NAME = "root"
+USER_PW   = "1234"
+DB_NAME   = "BigData_DB"
+CHAR_SET  = 'utf8'
 
 
 
@@ -348,6 +356,121 @@ def loadImage(width, height):
     inImage[2] = np.frombuffer(B.tobytes(), dtype = np.uint8)
 
 
+def saveTempImage() :
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+
+    saveFp = tempfile.gettempdir() + "/" + str(random.randint(10000, 99999)) + ".raw"
+    if saveFp == '' or saveFp == None :
+        return
+    print(saveFp)
+    saveFp = open(saveFp, mode='wb')
+    for i in range(outH) :
+        for k in range(outW) :
+            saveFp.write(struct.pack('B', outImage[i][k]))
+    saveFp.close()
+    return saveFp
+
+
+def saveMysql():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+
+    con = pymysql.connect(host=IP_ADDR, user=USER_NAME, password=USER_PW,
+                          db=DB_NAME, charset=CHAR_SET)
+    cur = con.cursor()
+
+    try:
+        sql = '''
+                CREATE TABLE rawImage_TBL(
+                raw_id INT AUTO_INCREMENT PRIMARY KEY,
+                raw_fname VARCHAR(30),
+                raw_extname CHAR(5),
+                raw_height SMALLINT, raw_width SMALLINT,
+                raw_avg  TINYINT UNSIGNED , 
+                raw_max  TINYINT UNSIGNED,  raw_min  TINYINT UNSIGNED,
+                raw_data LONGBLOB);
+            '''
+        cur.execute(sql)
+    except:
+        pass
+
+    fullname = FILE_PATH
+    binData = b_img
+    print("sizo of b_img : " , b_img)
+
+    fname, extname = os.path.basename(fullname).split(".")
+    fsize  = len(binData)
+    height = inH
+    width  = inW
+
+    sql = "INSERT INTO rawImage_TBL(raw_id , raw_fname,raw_extname,"
+    sql += "raw_height,raw_width,raw_avg,raw_max,raw_min,raw_data) "
+    sql += " VALUES(NULL,'" + fname + "','" + extname + "',"
+    sql += str(height) + "," + str(width) + ","
+    sql += str(0000) + "," + str(0000) + "," + str(0000)
+    sql += ", %s )"
+
+    tupleData = (binData,)
+    cur.execute(sql, tupleData)
+
+    con.commit()
+
+    cur.close()
+    con.close()
+
+    print("업로드 OK -->" + fullname)
+
+    def selectRecord():
+        global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+        selIndex = listbox.curselection()[0]
+        subWindow.destroy()
+        raw_id = queryList[selIndex][0]
+        sql = "SELECT raw_fname, raw_extname, raw_data FROM rawImage_TBL2 "
+        sql += "WHERE raw_id = " + str(raw_id)
+        cur.execute(sql)
+        fname, extname, binData = cur.fetchone()
+
+        fullPath = tempfile.gettempdir() + '/' + fname + "." + extname
+        with open(fullPath, 'wb') as wfp:
+            wfp.write(binData)
+        cur.close()
+        con.close()
+
+def loadMysql():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+
+    con = pymysql.connect(host=IP_ADDR, user=USER_NAME, password=USER_PW,
+                          db=DB_NAME, charset=CHAR_SET)
+    cur = con.cursor()
+
+    sql = "SELECT raw_id, raw_fname, raw_extname, raw_height , raw_width from rawImage_TBL"
+
+    cur.execute(sql)
+
+    queryList = cur.fetchall()
+    rowList   = [ ':'.join(map(str, row) )  for row in queryList ]
+
+    print(rowList)
+
+    strToSend = ""
+    for row in rowList:
+        strToSend += "-" + row
+
+    length = len(strToSend)
+    print(strToSend)
+
+    conn.send(length.to_bytes(4, byteorder='little'))
+    print(conn.send(bytes(strToSend.encode('utf-8'))))
+    print( "elapsed time : ", time.time() - START )
+
+
+    cur.close()
+    con.close()
+
+
+
+
+
+
 
 
 
@@ -364,7 +487,6 @@ def equalImage():
 
     outImage = inImage
     sendImage()
-
 
 def addImage():
     global DRIVER_NAME, FILE_PATH, VALUE , LUT, inImage, outImage, b_img ,inH, inW, outW, outH
@@ -490,18 +612,7 @@ def zoomout():
             for k in range( outW ):
                 outImage[rgb][ i + offsetx ][ k + offsety ] += inImage[rgb][ int(i * VALUE)  ][ int(k * VALUE)  ]
 
-    #
-    # for rgb in range(3):
-    #     for i in range( int(inH // VALUE) ):
-    #         for k in range( int(inW // VALUE) ):
-    #
-    #             xFrom = VALUE *  i
-    #             xTo   = VALUE * (i + 1)
-    #             yFrom = VALUE *  k
-    #             yTo   = VALUE * (k + 1)
-    #
-    #             outImage[rgb][i + Cy][k + Cx] = inImage[rgb: rgb + 1 , xFrom :  xTo , yFrom : yTo ].mean()
-    #
+
     sendImage()
 
 
@@ -512,8 +623,6 @@ def zoomin():
     print(sx, sy)
     sx = np.array(sx)
     sy = np.array(sy)
-
-
 
     xMax = sx.max()
     xMin = sx.min()
@@ -534,7 +643,6 @@ def zoomin():
     yMaxs = sy.max() * scale
     yMins = sy.min() * scale
 
-
     xdisToCenter = (512 - xMin + xdiff * 0.5) * scale
     ydisToCenter = (512 - yMin + ydiff * 0.5) * scale
 
@@ -543,11 +651,8 @@ def zoomin():
     tempH = inH * scale
     tempW = inW * scale
 
-
-
     print(xdiff)
     print(ydiff)
-
 
     outImage = np.zeros( (3 ,inH, inW), dtype = np.uint8 )
     tempImage = np.zeros( (3 ,int(tempH), int(tempW)), dtype = np.uint8 )
@@ -558,8 +663,8 @@ def zoomin():
     C1, C2, C3, C4 = [0] * 4  # 결정할 위치(n)의 상하 좌우 픽셀
 
     for rgb in range(3):
-        for i in range(int(tempH)):
-            for k in range(int(tempW)):
+        for i in range(int(yMins), int(yMaxs)):
+            for k in range( int(xMins), int( xMaxs) ):
 
                 rH = i / scale
                 rW = k / scale
@@ -596,9 +701,6 @@ def zoomin():
                 if 0 <= i + yMins <= outH * scale -1 and 0 <= k + xMins <= outW * scale - 1:
                     outImage[rgb][i][k] = tempImage[rgb][ int(i + yMins)  ][ int(k + xMins ) ]
 
-
-
-
     sendImage()
 
 
@@ -616,13 +718,17 @@ def histoImage():
     for rgb in range(3):
         for i in range(inH):
             for k in range(inW):
-                incountList[rgb][inImage[rgb][i][k]] += 1
+                incountList[rgb][inImage[rgb][i][k]]+= 1
 
-    plt.figure()
-    plt.plot(incountList[0])
-    plt.plot(incountList[1])
-    plt.plot(incountList[2])
-    plt.title("Histogram")
+    fig = plt.figure()
+
+    a1 = fig.add_subplot(3, 1, 1)
+    a2 = fig.add_subplot(3, 1, 2)
+    a3 = fig.add_subplot(3, 1, 3)
+
+    a1.plot(incountList[0], color='r')
+    a2.plot(incountList[1], color='g')
+    a3.plot(incountList[2], color='b')
 
     buf = io.BytesIO()
 
@@ -693,10 +799,10 @@ def homography():
     global R, G, V, H, S, V, sx , ex, sy, ey
 
     outH = inH
-    outW = inW
+    outW = outW
 
     inImage = np.reshape(inImage, (3, inH, inW))
-    outImage   = malloc3d(outH, outW )
+    outImage = np.zeros((3,outH, outW), dtype = np.uint8)
 
     print(sx, ex, sy, ey)
     print(outImage.shape)
@@ -704,19 +810,14 @@ def homography():
     ex = np.array(ex)
     ey = np.array(ey)
 
-
     projection = projection_matrix( ex, sx, ey, sy)
     projection = np.array(projection)
 
-
     p = projection
-
-
-    outImage = inImage
 
     for rgb in range(3):
         for j in range( ey.min(), ey.max() ):
-            for i in range(ex.min(), ex.max()):
+            for i in range( ex.min(), ex.max() ):
 
                 w = p[2][0] * i + p[2][1] * j + p[2][2];
 
@@ -763,11 +864,166 @@ def valueConvImage(mask):
 
     outImage[R], outImage[G], outImage[B] = Image.merge("HSV", (Himg, Simg, Vimg)).convert("RGB").split()
 
+    sendImage()
+
+
+def convolve():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global R, G, V, H, S, V
+    global CH, mask, convFormat
+
+    print(is_rgb, is_hsv)
+    print(mask)
+
+    # convFormat = 0 > rgb , 1 > hsb ,
+
+    ## 출력영상 크기 결정 ##
+    outH = inH;
+    outW = inW;
+
+    inImage    = np.reshape(inImage, (3, inH, inW))
+    outImage   = malloc3d(outH, outW )
+
+
+    print("CH: ", CH)
+
+    if convFormat == 0:
+        inImageRGB    = malloc3d(outH, outW)
+        inImageRGB[R] = Image.fromarray(inImage[R].reshape((inW, inH)))
+        inImageRGB[G] = Image.fromarray(inImage[G].reshape((inW, inH)))
+        inImageRGB[B] = Image.fromarray(inImage[B].reshape((inW, inH)))
+
+        for channel in CH:
+            inImageRGB = inImageRGB.astype(np.double)
+            inImageRGB[channel] = (ndimage.convolve(inImageRGB[channel], mask))
+
+            if mask.sum() == 0:
+                inImageRGB[channel] += 127
+
+            inImageRGB[channel] = np.where(inImageRGB[channel] > 255, 255, inImageRGB[channel])
+            inImageRGB[channel] = np.where(inImageRGB[channel] <    0,  0, inImageRGB[channel])
+
+        outImage = inImageRGB.astype(np.uint8)
+
+
+
+    if convFormat == 1:
+        inImageRGB = [0] * 3
+
+        ## inImageRGB의 타입이 넘파이 배열이면 자동으로 이미지 객체를 넘파이로 변환해서 받으므로 주의
+        inImageRGB[R] = Image.fromarray(inImage[R].reshape((inW, inH)))
+        inImageRGB[G] = Image.fromarray(inImage[G].reshape((inW, inH)))
+        inImageRGB[B] = Image.fromarray(inImage[B].reshape((inW, inH)))
+
+        inImageHSV = malloc3d(outH, outW )
+        inImageHSV[H], inImageHSV[S], inImageHSV[V] = Image.merge("RGB", (inImageRGB[R], inImageRGB[G], inImageRGB[B])).convert("HSV").split()
+        inImageHSV    = inImageHSV.astype(np.double)
+
+        for channel in CH:
+
+            inImageHSV[channel] = (ndimage.convolve(inImageHSV[channel], mask))
+
+            if mask.sum() == 0:
+                inImageHSV[channel] += 127
+
+            inImageHSV[channel] = np.where(inImageHSV[V] > 255, 255, inImageHSV[channel]  )
+            inImageHSV[channel] = np.where(inImageHSV[V] < 0  ,   0, inImageHSV[channel]  )
+
+            inImageHSV    = inImageHSV.astype(np.uint8)
+
+
+        Himg = Image.fromarray(inImageHSV[H])
+        Simg = Image.fromarray(inImageHSV[S])
+        Vimg = Image.fromarray(inImageHSV[V])
+
+        outImage[R], outImage[G], outImage[B] = Image.merge("HSV", (Himg, Simg, Vimg)).convert("RGB").split()
 
     sendImage()
 
 
+def equalization():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
 
+    ## 중요! 코드. 출력영상 크기 결정 ##
+    outH = inH;
+    outW = inW;
+
+    ###### 메모리 할당 ################
+
+    inImage    = np.reshape(inImage, (3, inH, inW))
+    outImage   = malloc3d(outH, outW )
+
+    ####### 진짜 컴퓨터 비전 알고리즘 #####
+
+    for rgb in range(3):
+        incountList = [0] * 256
+
+        for i in range(inH):
+            for k in range(inW):
+                incountList[ inImage[rgb][i][k] ] += 1
+
+        sum = [0] * 256
+        normalSum = [0] * 256
+
+        sum_r = 0
+
+        for i in range(256):
+            sum_r += incountList[i]
+            sum[i] = sum_r
+
+        for i in range(256):
+            normalSum[i] = sum[i] * (1 / (inH * inW)) * 255
+
+        for i in range(inH):
+            for k in range(inW):
+
+                value = int(normalSum[inImage[rgb][i][k]])
+
+                if value < 0:
+                    value = 0
+                if value > 255:
+                    value = 255
+
+                outImage[rgb][i][k] = value
+
+    sendImage()
+
+#스트레칭 알고리즘
+def endInImage():
+    global DRIVER_NAME, FILE_PATH, VALUE, LUT, inImage, outImage, b_img, inH, inW, outW, outH
+    global end_value, in_value
+
+    outH = inH
+    outW = inW
+
+    inImage    = np.reshape(inImage, (3, inH, inW))
+    outImage   = malloc3d(outH, outW )
+
+    for rgb in range(3):
+
+        max = inImage[rgb].max()
+        min = inImage[rgb].min()
+
+        minAdd = end_value
+        maxSub = in_value
+
+        max -= maxSub
+        min += minAdd
+
+        for i in range(inH) :
+            for k in range(inW) :
+
+                value = int( ( inImage[rgb][i][k] - min ) / (max - min) * 255 )
+
+                if value < 0:
+                    value = 0
+
+                if value > 255:
+                    value = 255
+
+                outImage[rgb][i][k] = value
+
+    sendImage()
 
 
 ######################################
@@ -816,7 +1072,44 @@ def loadRoi(zoomPoints):
     sx = [ points[0], points[1], points[2], points[3] ]
     sy = [ points[4], points[5], points[6], points[7] ]
 
+def loadKernnel(premask):
+    global CH, is_rgb, is_hsv, mask, convFormat
+    preMask = list(map( lambda x: float(  x   ) if x != '' else '', premask.split("_")[1:]))
 
+    convFormat = 0
+    is_rgb = preMask[0]
+    is_hsv = preMask[1]
+
+    if is_rgb == 1:
+        convFormat = 0
+    elif is_hsv == 1:
+        convFormat = 1
+
+
+
+    CH = []
+    if preMask[2] == 1:
+        CH.append(0)
+    if preMask[3] == 1:
+        CH.append(1)
+    if preMask[4] == 1:
+        CH.append(2)
+
+    mask = np.zeros((3,3), dtype = np.float32)
+
+    print("preMask",preMask)
+
+    mask[0][0] = preMask[5]  ;  mask[0][1] = preMask[6]  ;     mask[0][2] = preMask[7]
+    mask[1][0] = preMask[8]  ;  mask[1][1] = preMask[9]  ;     mask[1][2] = preMask[10]
+    mask[2][0] = preMask[11] ;  mask[2][1] = preMask[12] ;     mask[2][2] = preMask[13]
+    mask = np.array(mask)
+
+
+def loadEndIn(end_in):
+    global end_value, in_value
+    end_in = list(map(lambda x: float(x) if x != '' else '', end_in.split("_")))
+    end_value = end_in[0]
+    in_value = end_in[1]
 
 
 def recvAndLoad():
@@ -852,16 +1145,21 @@ def recvAndLoad():
 
 
     VALUE       = int( OPTION[3] ) if OPTION[3].isdigit() else OPTION[3]
-
     POINTS      = OPTION[4]
 
-    print(POINTS)
+    print("POINTS :", POINTS)
 
     if POINTS != '':
         if POINTS[0] == "P":
             loadPerspectiveValues(POINTS[1 : ])
         elif POINTS[0] == "Z":
             loadRoi(POINTS[ 1 : ])
+
+        elif POINTS[0] == "C":
+            loadKernnel(POINTS[ 1 : ])
+
+        elif POINTS[0] == "E":
+            loadEndIn(POINTS[ 1 : ])
 
         else:
             loadRois(POINTS)
@@ -904,6 +1202,8 @@ def sendImage():
     conn.send(length.to_bytes(4, byteorder='little'))
     print(conn.send(b_outImg[:]))
     print( "elapsed time : ", time.time() - START )
+
+
 
 
 
@@ -967,6 +1267,21 @@ if __name__ == '__main__':
 
             elif mode == 11:
                 perspectiveTrasform()
+
+            elif mode == 12:
+                convolve()
+
+            elif mode == 13:
+                equalization()
+
+            elif mode == 14:
+                endInImage()
+
+            elif mode == 15:
+                saveMysql()
+
+            elif mode == 16:
+                loadMysql()
 
 
         except UnicodeDecodeError as e:

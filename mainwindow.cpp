@@ -65,14 +65,15 @@ void MainWindow::createThreads(){
 
 void MainWindow::makeConnections(){
 
-    connect(&socThread      , &QThread   :: finished     , sw   , &QObject    :: deleteLater        );
-    connect(this            , &MainWindow:: askCon       , sw   , &SocWorker  :: connectServer      );
-    connect(this            , &MainWindow:: askDisCon    , sw   , &SocWorker  :: disConnectServer   );
-    connect(sw              , &SocWorker :: sendMsg      , this , &MainWindow :: putStatus          );
-    connect(sw              , &SocWorker :: resultReady  , this , &MainWindow :: handleResults      );
-    connect(this            , &MainWindow:: askTask      , sw   , &SocWorker  :: onAskTask          );
-    connect(ui->label_paint , &PaintLabel:: roiSelect    , this , &MainWindow :: on_RoiSelect       );
-    connect(ui->label_paint , &PaintLabel:: roiRelesed   , this , &MainWindow :: on_RoiRelese       );
+    connect(&socThread      , &QThread   :: finished      , sw   , &QObject    :: deleteLater        );
+    connect(this            , &MainWindow:: askCon        , sw   , &SocWorker  :: connectServer      );
+    connect(this            , &MainWindow:: askDisCon     , sw   , &SocWorker  :: disConnectServer   );
+    connect(this            , &MainWindow:: askTask       , sw   , &SocWorker  :: onAskTask          );
+    connect(this            , &MainWindow:: presetChecked , sw   , &SocWorker  :: onPresetChecked    );
+    connect(sw              , &SocWorker :: sendMsg       , this , &MainWindow :: putStatus          );
+    connect(sw              , &SocWorker :: resultReady   , this , &MainWindow :: handleResults      );
+    connect(ui->label_paint , &PaintLabel:: roiSelect     , this , &MainWindow :: on_RoiSelect       );
+    connect(ui->label_paint , &PaintLabel:: roiRelesed    , this , &MainWindow :: on_RoiRelese       );
 
 }
 
@@ -85,6 +86,14 @@ void MainWindow::makeConnections(){
 
 void MainWindow::handleResults(QByteArray _recvImg ){
     qDebug() << __func__;
+
+    if(_recvImg[0] == '-'){
+
+        QStringList dbDatas = QString::fromLocal8Bit(_recvImg).split("-");
+        dbDatas.removeAt(0);
+
+    }
+
 
     ui->label_img->clear();
 
@@ -145,8 +154,19 @@ void SocWorker::disConnectServer(){
 
 void SocWorker::onAskTask(QString _fPath, int _mode, bool compress, QString _option ){
     qDebug() << __func__;
+    QByteArray proc;
 
-    QByteArray proc = createProc(_fPath, _mode, compress, _option);
+    qDebug() <<"is_presetSaving" << is_presetSaving;
+
+    if (is_presetSaving){
+
+        proc = createProc(_fPath, _mode, compress, _option, tempData);
+
+    }else{
+
+        proc = createProc(_fPath, _mode, compress, _option);
+
+    }
 
     qDebug() << "send data size : " << proc.length();
 
@@ -158,6 +178,8 @@ void SocWorker::onAskTask(QString _fPath, int _mode, bool compress, QString _opt
 }
 
 void SocWorker::onRecv(){
+    qDebug() << "recv! : ";
+
 
     if(is_recvStart != true){
 
@@ -166,19 +188,34 @@ void SocWorker::onRecv(){
 
         targetLength = *reinterpret_cast<int*>(header);
         is_recvStart = true;
+        qDebug() << "targetLength : " << targetLength;
 
         recvData.clear();
     }
 
     recvData.push_back(sendSock->readAll());
+    qDebug() << "recvData.length() : " << recvData.length();
 
     if(recvData.length() == targetLength){
 
         emit resultReady( recvData );
+
+        if (is_presetSaving){
+            tempData = recvData;
+        }
+
         is_recvStart = false;
 
         targetLength = -1;
 
+    }
+
+}
+
+void SocWorker::onPresetChecked(bool checked){
+    is_presetSaving = checked;
+    if(!checked){
+        tempData.clear();
     }
 }
 
@@ -240,7 +277,7 @@ void MainWindow::on_openInImage_triggered()
 
 
 //    current_path = path_dial(this);
-    current_path = "/home/hyeok/Downloads/test.jpg";
+    current_path = "C:/Users/user/Downloads/test.jpg";
     QImage* tempImg = img_path(current_path);
 
     imgWidth    = tempImg->width() ;
@@ -399,4 +436,89 @@ void MainWindow::on_btn_Perspectiv_clicked()
     emit askTask( current_path,  11,is_compressing ,
                   sizeOption + "|" + is_compressing + "|" + "0"  + "|" + "P" + rot + trans + scale + "|" );
 
+}
+
+void MainWindow::on_btn_conv_clicked()
+{
+
+    QString convMsg = "|C";
+
+    convMsg += "_" + QString::number((ui->radio_rgb->isChecked() ? 1 : 0)) ;
+    convMsg += "_" + QString::number((ui->radio_hsv->isChecked() ? 1 : 0)) ;
+    convMsg += "_" + QString::number((ui->cb_first->isChecked()  ? 1 : 0)) ;
+    convMsg += "_" + QString::number((ui->cb_second->isChecked() ? 1 : 0)) ;
+    convMsg += "_" + QString::number((ui->cb_third->isChecked()  ? 1 : 0)) ;
+
+    convMsg += "_" + QString(ui->edit_00->text());
+    convMsg += "_" + QString(ui->edit_01->text());
+    convMsg += "_" + QString(ui->edit_02->text());
+
+    convMsg += "_" + QString(ui->edit_10->text());
+    convMsg += "_" + QString(ui->edit_11->text());
+    convMsg += "_" + QString(ui->edit_12->text());
+
+    convMsg += "_" + QString(ui->edit_20->text());
+    convMsg += "_" + QString(ui->edit_21->text());
+    convMsg += "_" + QString(ui->edit_22->text());
+
+    convMsg += "|";
+
+    emit askTask( current_path,  12,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + "0" + convMsg );
+
+}
+
+void MainWindow::on_radio_rgb_clicked()
+{
+    ui->cb_first->setText("R");
+    ui->cb_second->setText("G");
+    ui->cb_third->setText("B");
+}
+
+void MainWindow::on_radio_hsv_clicked()
+{
+    ui->cb_first->setText("H");
+    ui->cb_second->setText("S");
+    ui->cb_third->setText("V");
+}
+
+void MainWindow::on_cb_preset_clicked(bool checked)
+{
+    emit presetChecked(checked);
+    is_presetSaving = checked;
+}
+
+
+void MainWindow::on_btn_nomalization_clicked()
+{
+    emit askTask( current_path,  13,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+}
+
+void MainWindow::on_btn_end_in_clicked()
+{
+
+    QString endInMsg = "|E";
+
+    endInMsg += ui->edit_end->text() + "_";
+    endInMsg += ui->edit_in->text();
+
+
+
+    emit askTask( current_path,  14,is_compressing ,
+                  sizeOption + "|" + is_compressing + "|" + "0" + endInMsg );
+
+}
+
+void MainWindow::on_actionSaveImage_triggered()
+{
+    emit askTask( current_path,  15,is_compressing ,
+                  sizeOption + "|" + is_compressing );
+
+}
+
+void MainWindow::on_actionLoadImage_triggered()
+{
+    emit askTask( current_path,  16,is_compressing ,
+                  sizeOption + "|" + is_compressing );
 }
