@@ -1116,7 +1116,74 @@ def loadEndIn(end_in):
     global end_value, in_value
     end_in = list(map(lambda x: float(x) if x != '' else '', end_in.split("_")))
     end_value = end_in[0]
-    in_value = end_in[1]
+    in_value  = end_in[1]
+
+
+def decode2D512(Image2D, rank):
+    SIZE          = 512
+    SIZE_OF_FLOAT = 4
+
+    A = np.frombuffer(Image2D[ : SIZE * rank * SIZE_OF_FLOAT   ] , dtype = np.float32)
+    B = np.frombuffer(Image2D[   SIZE * rank * SIZE_OF_FLOAT : ] , dtype = np.float32)
+
+    print("A.shape", A.shape)
+    print("B.shape", B.shape)
+
+    A.resize((512,rank))
+    B.resize((rank,512))
+
+    print("A.shape", A.shape)
+    print("B.shape", B.shape)
+
+    C = A.dot(B)
+
+    print("C.shape", C.shape)
+
+    C = np.where( C > 255, 255, C)
+    C = np.where( C <   0,   0, C)
+
+    C = C.astype(np.uint8)
+
+    print("C.shape", C.shape)
+
+    return C
+
+
+
+
+def decode512(img):
+    SIZE = 512;
+    RANK = 50
+    SIZE_OF_FLOAT = 4
+
+    print("img[                                 : SIZE * RANK * 2 * SIZE_OF_FLOAT ]" , len(img[                                 : SIZE * RANK * 2 * SIZE_OF_FLOAT ]))
+    print("img[SIZE * RANK * 2 * SIZE_OF_FLOAT  : SIZE * RANK * 4 * SIZE_OF_FLOAT ]" , len(img[SIZE * RANK * 2 * SIZE_OF_FLOAT  : SIZE * RANK * 4 * SIZE_OF_FLOAT ]))
+    print("img[SIZE * RANK * 4 * SIZE_OF_FLOAT  : SIZE * RANK * 6 * SIZE_OF_FLOAT ]" , len(img[SIZE * RANK * 4 * SIZE_OF_FLOAT  : SIZE * RANK * 6 * SIZE_OF_FLOAT ]))
+
+    REncoded = img[                                 : SIZE * RANK * 2 * SIZE_OF_FLOAT ]
+    GEncoded = img[SIZE * RANK * 2 * SIZE_OF_FLOAT  : SIZE * RANK * 4 * SIZE_OF_FLOAT ]
+    BEncoded = img[SIZE * RANK * 4 * SIZE_OF_FLOAT  : SIZE * RANK * 6 * SIZE_OF_FLOAT ]
+
+    R = decode2D512(REncoded, RANK).tobytes(order='F')
+    G = decode2D512(GEncoded, RANK).tobytes(order='F')
+    B = decode2D512(BEncoded, RANK).tobytes(order='F')
+
+    print("R", len(R))
+    print("G", len(G))
+    print("B", len(B))
+
+    b_imgTemp = bytearray()
+
+    for i in range(512 * 512):
+        b_imgTemp += R[i].to_bytes(1, byteorder = 'big')
+        b_imgTemp += G[i].to_bytes(1, byteorder = 'big')
+        b_imgTemp += B[i].to_bytes(1, byteorder = 'big')
+
+    b_imgTemp = np.array(b_imgTemp)
+
+    print(b_imgTemp.shape)
+    return b_imgTemp
+
 
 
 def recvAndLoad():
@@ -1144,11 +1211,13 @@ def recvAndLoad():
     MODE        = list_meta[2]
     OPTION      = list(filter(lambda x: x != "", list_meta[3].split("|")))
 
-    OPTION.extend( [''] * 3 );
+    OPTION.extend( [''] * 3 )
 
     WIDTH       = OPTION[0]
     HEIGHT      = OPTION[1]
     COMPRESS    = OPTION[2]
+
+
 
 
     VALUE       = int( OPTION[3] ) if OPTION[3].isdigit() else OPTION[3]
@@ -1174,6 +1243,13 @@ def recvAndLoad():
 
     # 나머지는 이미지 데이터
     b_img = b_totData[200:]
+
+    if COMPRESS == "\\x01":
+
+        print("압축을 해제하는중입니다.")
+        print("len(b_img)", len(b_img) )
+        b_img = decode512(b_img)
+
 
     print("OPTION          :", OPTION       )
     print("DRIVER_NAME     :", DRIVER_NAME  )

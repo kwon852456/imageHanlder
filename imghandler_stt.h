@@ -438,7 +438,6 @@ inline QByteArray* encode_512(Eigen::Matrix<float,Dynamic,Dynamic> _mat, int ran
     QByteArray* arr_A = new QByteArray(reinterpret_cast<char*>(A.data()), SIZE * rank * sizeof(float));
     QByteArray* arr_B = new QByteArray(reinterpret_cast<char*>(B.data()), SIZE * rank * sizeof(float));
 
-
     QByteArray* encoded_mat = new QByteArray();
     encoded_mat->push_back(*arr_A);
     encoded_mat->push_back(*arr_B);
@@ -494,6 +493,7 @@ inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _o
     QByteArray b_Img;
     QByteArray b_header;
     qDebug() << "compress : " << compress;
+
     if(compress){
 
         b_Img    = encode_path(_fPath, 50);
@@ -501,12 +501,15 @@ inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _o
 
     }else{
 
-        QImage* tempImg = img_path(_fPath);
-
         if(_image == nullptr){
+
+            QImage* tempImg = img_path(_fPath);
             b_Img    = QByteArray( reinterpret_cast<char*>(tempImg->bits()), tempImg->sizeInBytes() );
+
         }else{
+
             b_Img    = _image;
+
         }
 
         b_header = head_enc( _fPath, _mode, _option, b_Img.length() );

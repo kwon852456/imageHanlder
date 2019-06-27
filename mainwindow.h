@@ -144,6 +144,7 @@ private:
     QTcpSocket* sendSock;
     QByteArray recvData;
     QByteArray tempData;
+    QByteArray preData;
     int targetLength = -1;
     bool is_recvStart = false;
     bool is_presetSaving = false;

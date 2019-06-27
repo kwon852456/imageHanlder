@@ -175,6 +175,7 @@ void SocWorker::onAskTask(QString _fPath, int _mode, bool compress, QString _opt
 
     qDebug() <<"is_presetSaving" << is_presetSaving;
 
+    //이전 데이터를 다시 보낼때.
     if (is_presetSaving){
 
         proc = createProc(_fPath, _mode, compress, _option, tempData);
@@ -195,8 +196,6 @@ void SocWorker::onAskTask(QString _fPath, int _mode, bool compress, QString _opt
 }
 
 void SocWorker::onRecv(){
-    qDebug() << "recv! : ";
-
 
     if(is_recvStart != true){
 
@@ -205,21 +204,20 @@ void SocWorker::onRecv(){
 
         targetLength = *reinterpret_cast<int*>(header);
         is_recvStart = true;
-        qDebug() << "targetLength : " << targetLength;
 
         recvData.clear();
     }
 
     recvData.push_back(sendSock->readAll());
-    qDebug() << "recvData.length() : " << recvData.length();
 
     if(recvData.length() == targetLength){
 
         emit resultReady( recvData );
 
-//        if (is_presetSaving){
+        preData = recvData;
+        if (is_presetSaving){
             tempData = recvData;
-//        }
+        }
 
         is_recvStart = false;
 
@@ -237,11 +235,7 @@ void SocWorker::onPresetChecked(bool checked){
 }
 
 void SocWorker::onSaveTempImage(QString _path){
-    QPixmap* pixmap = pix_img(colImg_ba(&tempData,512, 512));
-//    QByteArray bytes;
-//    QBuffer buffer(&bytes);
-//    buffer.open(QIODevice::WriteOnly);
-//    pixmap -> save(&buffer, "PNG");
+    QPixmap* pixmap = pix_img(colImg_ba(&preData,512, 512));
 
     QFile file(_path + "/" + "yourFile.png");
     file.open(QIODevice::WriteOnly);
@@ -306,9 +300,7 @@ void PaintLabel::paintEvent( QPaintEvent * e ){
 void MainWindow::on_openInImage_triggered()
 {
 
-
-//    current_path = path_dial(this);
-    current_path = "C:/Users/user/Downloads/test.jpg";
+    current_path = path_dial(this);
     QImage* tempImg = img_path(current_path);
 
     imgWidth    = tempImg->width() ;
@@ -318,7 +310,7 @@ void MainWindow::on_openInImage_triggered()
 
     qDebug() << current_path;
 
-    emit askTask( current_path , 0, is_compressing ,sizeOption ) ;
+    emit askTask( current_path , 0, is_compressing ,sizeOption + "|" + is_compressing ) ;
 
     delete tempImg;
 
@@ -563,6 +555,7 @@ void MainWindow::onDbItemSelected(int idx){
 void MainWindow::on_actionsave_as_triggered()
 {
 
-    QString save_path = QFileDialog::getExistingDirectory(this, "save dir, ",QDir::homePath());
+    QString save_path = QFileDialog::getSaveFileName(this, "save dir, ",QDir::homePath());
+
     emit saveTempImage(save_path);
 }
