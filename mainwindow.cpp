@@ -303,8 +303,9 @@ void MainWindow::on_openInImage_triggered()
     current_path = path_dial(this);
     QImage* tempImg = img_path(current_path);
 
-    imgWidth    = tempImg->width() ;
-    imgHeight   = tempImg->height();
+
+    imgWidth    = tempImg->width()  ;
+    imgHeight   = tempImg->height() ;
 
     sizeOption  = "|" + QString::number(imgWidth) + "|" + QString::number(imgHeight) + "|";
 
@@ -555,7 +556,8 @@ void MainWindow::onDbItemSelected(int idx){
 void MainWindow::on_actionsave_as_triggered()
 {
 
-    QString save_path = QFileDialog::getSaveFileName(this, "save dir, ",QDir::homePath());
+//    QString save_path = QFileDialog::getSaveFileName(this, "save dir, ",QDir::homePath());
+    QString save_path = QFileDialog::getExistingDirectory(this, "save dir", QDir::homePath());
 
     emit saveTempImage(save_path);
 }

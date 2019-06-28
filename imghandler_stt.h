@@ -496,7 +496,7 @@ inline QByteArray createProc(QString _fPath, int _mode,bool compress, QString _o
 
     if(compress){
 
-        b_Img    = encode_path(_fPath, 50);
+        b_Img    = encode_path(_fPath, 100);
         b_header = head_enc( _fPath, _mode, _option, b_Img.length() );
 
     }else{

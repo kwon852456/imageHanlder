@@ -32,7 +32,7 @@ RECV_TCP_IP = 'localhost'
 RECV_TCP_PORT = 1234
 
 
-IP_ADDR   = '192.168.56.110'
+IP_ADDR   = '192.168.56.112'
 USER_NAME = "root"
 USER_PW   = "1234"
 DB_NAME   = "BigData_DB"
@@ -1153,7 +1153,7 @@ def decode2D512(Image2D, rank):
 
 def decode512(img):
     SIZE = 512;
-    RANK = 50
+    RANK = 100
     SIZE_OF_FLOAT = 4
 
     print("img[                                 : SIZE * RANK * 2 * SIZE_OF_FLOAT ]" , len(img[                                 : SIZE * RANK * 2 * SIZE_OF_FLOAT ]))
